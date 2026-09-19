@@ -1,0 +1,73 @@
+name: Apply Supabase migrations
+
+# Manual only - this WRITES to the Supabase database, so it never runs on push.
+# Trigger it from the Actions tab: Run workflow -> type APPLY -> Run.
+#
+# Requires a repository secret named DATABASE_URL containing the Supabase
+# **pooler** connection string, e.g.
+#   postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
+# Use the pooler host: db.<project-ref>.supabase.co is IPv6-only and will not
+# resolve on GitHub's IPv4-only runners.
+#
+# The SQL in supabase/setup_all.sql is idempotent, so re-running is safe.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type APPLY to confirm writing to the Supabase database'
+        required: true
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply schema
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.confirm == 'APPLY' }}
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Check DATABASE_URL secret
+        run: |
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "::error::Repository secret DATABASE_URL is not set (Settings -> Secrets and variables -> Actions)."
+            exit 1
+          fi
+
+      - name: Apply supabase/setup_all.sql
+        run: |
+          set -euo pipefail
+          # Supabase refuses non-SSL connections; force sslmode=require if absent.
+          url="$DATABASE_URL"
+          case "$url" in
+            *sslmode=*) ;;
+            *\?*) url="$url&sslmode=require" ;;
+            *)    url="$url?sslmode=require" ;;
+          esac
+          psql "$url" -v ON_ERROR_STOP=1 -f supabase/setup_all.sql
+
+      - name: Verify tables
+        run: |
+          set -euo pipefail
+          url="$DATABASE_URL"
+          case "$url" in
+            *sslmode=*) ;;
+            *\?*) url="$url&sslmode=require" ;;
+            *)    url="$url?sslmode=require" ;;
+          esac
+          psql "$url" -v ON_ERROR_STOP=1 -c \
+            "select table_name from information_schema.tables where table_schema = 'public' order by table_name;"
+          psql "$url" -v ON_ERROR_STOP=1 -c \
+            "select id from storage.buckets where id = 'submissions';"

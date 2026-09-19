@@ -20,15 +20,19 @@ function FinalSubmitContent() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [blocked, setBlocked] = useState<'no-team' | 'no-aim' | null>(null);
 
   useEffect(() => {
     (async () => {
       const myTeam = await getMyTeam();
-      if (!myTeam) { router.push('/team/join'); return; }
-      if (!myTeam.submissions.aim) { router.push('/submit/aim'); return; }
+      if (!myTeam) { setBlocked('no-team'); setLoading(false); return; }
+
       setTeam(myTeam);
       const cfg = await getEventConfig();
       setConfig(cfg);
+
+      if (!myTeam.submissions.aim) { setBlocked('no-aim'); setLoading(false); return; }
+
       if (myTeam.submissions.final) {
         setDeployedUrl(myTeam.submissions.final.deployed_url ?? '');
         setRepoUrl(myTeam.submissions.final.repo_url ?? '');
@@ -88,6 +92,43 @@ function FinalSubmitContent() {
       <div className="page-loading">
         <div className="loading-bracket">&lt; / &gt;</div>
         <p className="eyebrow">Loading...</p>
+      </div>
+    );
+  }
+
+  if (blocked === 'no-team') {
+    return (
+      <div className="submit-page">
+        <Link href="/dashboard" className="btn-text" style={{ marginBottom: '16px' }}>← Dashboard</Link>
+        <h1>Submission 2: Final Deploy</h1>
+        <div className="empty-state">
+          <div className="empty-icon">&lt; / &gt;</div>
+          <h3>You need a team first</h3>
+          <p>Final submissions are made per team. Create or join a team, then come back here.</p>
+          <Link href="/team/join" className="btn-primary btn-sm" style={{ marginTop: '14px' }}>
+            Set up your team →
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (blocked === 'no-aim') {
+    return (
+      <div className="submit-page">
+        <Link href="/dashboard" className="btn-text" style={{ marginBottom: '16px' }}>← Dashboard</Link>
+        <h1>Submission 2: Final Deploy</h1>
+        <div className="empty-state">
+          <div className="empty-icon">1 → 2</div>
+          <h3>Submission 1 (Aim + PPT) is required first</h3>
+          <p>
+            Before submitting your final app, your team must complete Submission 1:
+            an aim summary and presentation deck. Once that is submitted, this page unlocks.
+          </p>
+          <Link href="/submit/aim" className="btn-primary btn-sm" style={{ marginTop: '14px' }}>
+            Go to Submission 1 →
+          </Link>
+        </div>
       </div>
     );
   }
@@ -164,6 +205,21 @@ function FinalSubmitContent() {
             {submitting ? 'Submitting...' : existing ? 'Update submission' : 'Submit'}
           </button>
         </form>
+      )}
+
+      {deadlinePassed && !existing && (
+        <div className="empty-state" style={{ marginTop: '8px' }}>
+          <div className="empty-icon">&lt; / &gt;</div>
+          <h3>The final submission deadline has passed</h3>
+          <p>
+            Your team did not have a final submission recorded before the deadline
+            ({config?.final_deadline ? new Date(config.final_deadline).toLocaleString() : 'deadline'}).
+            Contact the organizers if you believe this is a mistake.
+          </p>
+          <Link href="/dashboard" className="btn-secondary btn-sm" style={{ marginTop: '14px' }}>
+            ← Back to dashboard
+          </Link>
+        </div>
       )}
 
       {deadlinePassed && existing && (

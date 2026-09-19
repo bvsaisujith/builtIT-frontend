@@ -22,7 +22,7 @@ export default function LandingPage() {
           <h1>Future of <span>IT</span></h1>
           <p className="hero-tagline">Innovate today. <span>Impact tomorrow.</span></p>
           <div className="hero-actions">
-            <Link href="/signup" className="btn-primary">Start building <span>↗</span></Link>
+            <Link href="/login" className="btn-primary">Start building <span>↗</span></Link>
             <Link href="/#about" className="btn-text">Explore the event <span>↓</span></Link>
           </div>
         </div>
@@ -107,7 +107,7 @@ export default function LandingPage() {
         <div className="cta-brackets">&lt; / &gt;</div>
         <p className="eyebrow">16 SEPTEMBER 2026</p>
         <h2>Ready to build<br /><span>what&apos;s next?</span></h2>
-        <Link href="/signup" className="btn-primary">Join built IT 2K26 <span>↗</span></Link>
+        <Link href="/login" className="btn-primary">Join built IT 2K26 <span>↗</span></Link>
       </section>
     </>
   );

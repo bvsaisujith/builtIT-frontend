@@ -1,16 +1,23 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, type FormEvent, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { getMyTeam } from '@/lib/data';
+import { useAuth } from '@/lib/auth-context';
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
+  const { profileCompleted } = useAuth();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    searchParams.get('error') === 'auth_failed'
+      ? 'GitHub sign-in failed or was cancelled. Try again or use email + password.'
+      : null,
+  );
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (ev: FormEvent) => {
@@ -31,7 +38,26 @@ export default function LoginPage() {
 
     const team = await getMyTeam();
     setLoading(false);
-    router.push(team ? '/dashboard' : '/team/join');
+    const dest = team ? '/dashboard' : profileCompleted ? '/dashboard' : '/team/join';
+    router.push(dest);
+  };
+
+  const handleGitHubLogin = async () => {
+    setError(null);
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: 'github',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        // No custom scope: Supabase's default is `user:email`, which its
+        // GitHub provider requires to fetch the participant's email during
+        // profile retrieval. Overriding the scope (e.g. read:user) strips
+        // that permission and breaks sign-in with "Error getting user
+        // profile from external provider".
+      },
+    });
+    if (oauthError) {
+      setError(oauthError.message);
+    }
   };
 
   return (
@@ -73,10 +99,31 @@ export default function LoginPage() {
           </button>
         </form>
 
+        <div className="auth-divider">
+          <span>or</span>
+        </div>
+
+        <button
+          type="button"
+          className="btn-secondary"
+          style={{ justifyContent: 'center', width: '100%' }}
+          onClick={handleGitHubLogin}
+        >
+          Continue with GitHub
+        </button>
+
         <div className="auth-footer">
-          Don&apos;t have an account? <Link href="/signup">Sign up</Link>
+          GitHub is the supported sign-in method.
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageContent />
+    </Suspense>
   );
 }

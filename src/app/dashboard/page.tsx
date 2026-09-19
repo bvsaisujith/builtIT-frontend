@@ -5,14 +5,29 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AuthGuard from '@/components/AuthGuard';
 import StatusBadge from '@/components/StatusBadge';
-import { getMyTeam, getEventConfig, getTeamCode } from '@/lib/data';
+import Countdown from '@/components/Countdown';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/auth-context';
+import {
+  getMyTeam,
+  getEventConfig,
+  getTeamCode,
+  getPendingJoinRequests,
+  respondToJoinRequest,
+  type JoinRequest,
+} from '@/lib/data';
 import type { TeamWithDetails, EventConfig } from '@/lib/types';
 
 function DashboardContent() {
   const router = useRouter();
+  const { profile } = useAuth();
   const [team, setTeam] = useState<TeamWithDetails | null>(null);
   const [config, setConfig] = useState<EventConfig | null>(null);
+  const [isLeader, setIsLeader] = useState(false);
+  const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionBusy, setActionBusy] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -21,9 +36,26 @@ function DashboardContent() {
       setTeam(myTeam);
       const cfg = await getEventConfig();
       setConfig(cfg);
+      const { data: { user: me } } = await supabase.auth.getUser();
+      const leader = !!me && me.id === myTeam.leader_id;
+      setIsLeader(leader);
+      if (leader) {
+        setJoinRequests(await getPendingJoinRequests(myTeam.id));
+      }
       setLoading(false);
     })();
   }, [router]);
+
+  const handleRespond = async (requestId: string, action: 'approve' | 'reject') => {
+    setActionError(null);
+    setActionBusy(requestId);
+    const { error } = await respondToJoinRequest(requestId, action);
+    setActionBusy(null);
+    if (error) { setActionError(error); return; }
+    setJoinRequests(prev => prev.filter(r => r.id !== requestId));
+    const refreshed = await getMyTeam();
+    if (refreshed) setTeam(refreshed);
+  };
 
   if (loading || !team) {
     return (
@@ -34,235 +66,185 @@ function DashboardContent() {
     );
   }
 
-  const teamCode = getTeamCode(team.id);
+  const teamCode = getTeamCode(team);
   const memberCount = team.members.length;
+  const maxMembers = config?.max_team_size ?? 4;
   const aimSub = team.submissions.aim;
   const finalSub = team.submissions.final;
-
-  const teamFormed = memberCount > 0;
-  const aimSubmitted = aimSub?.status !== 'NOT_SUBMITTED' && aimSub?.submitted_at !== null;
-  const finalSubmitted = finalSub?.status !== 'NOT_SUBMITTED' && finalSub?.submitted_at !== null;
+  const aimDone = !!aimSub?.submitted_at;
+  const finalDone = !!finalSub?.submitted_at;
 
   return (
     <div className="dashboard-page">
-      <h1>{team.name}</h1>
-      <p className="subtitle">{team.category} · Team code: <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--color-accent-secondary)' }}>{teamCode}</span></p>
-
-      {memberCount < 3 && (
-        <div className="waiting-banner">
-          <span>Waiting for teammates ({memberCount}/3 joined) — share code <strong style={{ fontFamily: "'JetBrains Mono', monospace" }}>{teamCode}</strong></span>
+      {/* 1 — Welcome / profile */}
+      <section className="dash-hero">
+        <div className="dash-hero-left">
+          {profile?.avatar_url ? (
+            <img src={profile.avatar_url} alt="" referrerPolicy="no-referrer" className="dash-hero-avatar" />
+          ) : (
+            <span className="dash-hero-avatar dash-hero-avatar-fallback">&lt; / &gt;</span>
+          )}
+          <div>
+            <span className="eyebrow">Welcome back</span>
+            <h1 style={{ fontSize: 'clamp(22px, 3vw, 30px)', lineHeight: 1.2 }}>
+              {profile?.full_name ?? 'Participant'}
+            </h1>
+            <p className="subtitle" style={{ marginTop: '4px' }}>
+              {profile?.github_username && (
+                <a
+                  href={profile.github_url ?? `https://github.com/${profile.github_username}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: 'var(--color-accent-secondary)' }}
+                >
+                  @{profile.github_username}
+                </a>
+              )}
+              {profile?.github_username && ' · '}
+              <strong>{team.name}</strong>
+              {teamCode && (
+                <> · <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--color-accent-secondary)' }}>{teamCode}</span></>
+              )}
+            </p>
+          </div>
         </div>
-      )}
+        <div className="dash-hero-actions">
+          <Link href="/teams" className="btn-secondary btn-sm">Browse teams</Link>
+          <Link href="/problem-statements" className="btn-secondary btn-sm">Problems</Link>
+        </div>
+      </section>
 
-      {config && (config.aim_deadline || config.final_deadline) && (
-        <div className="deadlines-strip">
-          {config.aim_deadline && (
-            <div className="deadline-pill">
-              <span className="deadline-label">Aim Deadline</span>
-              <div className="deadline-value">
-                {new Date(config.aim_deadline).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-              </div>
+      {/* 2 — Status tiles (quick actions) */}
+      <section className="dash-status-grid">
+        <Link href="/team/join" className="status-tile">
+          <span className="status-tile-label">Team</span>
+          <span className="status-tile-value">{memberCount} / {maxMembers}</span>
+          <span className="status-tile-hint">
+            {memberCount >= maxMembers ? 'Team is full' : 'Invite teammates with your code'}
+          </span>
+        </Link>
+
+        <Link href="/problem-statements" className="status-tile">
+          <span className="status-tile-label">Domain</span>
+          <span className="status-tile-value">{team.domain?.name ?? '—'}</span>
+          <span className="status-tile-hint">
+            {team.problem_statement?.title
+              ? team.problem_statement.title
+              : isLeader
+                ? memberCount < 3
+                  ? `Need ${3 - memberCount} more member${3 - memberCount === 1 ? '' : 's'} before selecting (min 3)`
+                  : 'Select your problem statement'
+                : 'Leader has not selected yet'}
+          </span>
+        </Link>
+
+        <Link href="/submit/aim" className="status-tile">
+          <span className="status-tile-label">Submission 1 · Aim</span>
+          <span className="status-tile-value">{aimDone ? <StatusBadge status={aimSub!.status} /> : 'Pending'}</span>
+          <span className="status-tile-hint">{aimDone ? 'Tap to review or edit' : 'Due before final submission'}</span>
+        </Link>
+
+        <Link href="/submit/final" className="status-tile">
+          <span className="status-tile-label">Submission 2 · Final</span>
+          <span className="status-tile-value">{finalDone ? <StatusBadge status={finalSub!.status} /> : aimDone ? 'Ready' : 'Locked'}</span>
+          <span className="status-tile-hint">{finalDone ? 'Tap to review or edit' : aimDone ? 'Deploy link + repo' : 'Complete Submission 1 first'}</span>
+        </Link>
+      </section>
+
+      {/* 3 - Deadlines */}
+      {(config?.aim_deadline || config?.final_deadline) && (
+        <section className="dash-grid" style={{ marginTop: '20px' }}>
+          {config?.aim_deadline && (
+            <div className="dash-card">
+              <h3>Aim deadline</h3>
+              <Countdown deadline={config.aim_deadline} label="Aim submission" />
             </div>
           )}
-          {config.final_deadline && (
-            <div className="deadline-pill">
-              <span className="deadline-label">Final Deadline</span>
-              <div className="deadline-value">
-                {new Date(config.final_deadline).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-              </div>
+          {config?.final_deadline && (
+            <div className="dash-card">
+              <h3>Final deadline</h3>
+              <Countdown deadline={config.final_deadline} label="Final submission" />
             </div>
           )}
-        </div>
+        </section>
       )}
 
-      <div className="dash-grid">
-        <div className="dash-card">
-          <h3>Team Info</h3>
-          <div className="team-info-row">
-            <span className="label">Name</span>
-            <span className="value">{team.name}</span>
-          </div>
-          <div className="team-info-row">
-            <span className="label">Category</span>
-            <span className="value">{team.category}</span>
-          </div>
-          <div className="team-info-row">
-            <span className="label">Team code</span>
-            <span className="value mono">{teamCode}</span>
-          </div>
-          <div className="team-info-row">
-            <span className="label">Members</span>
-            <span className="value">{memberCount} / 3</span>
-          </div>
-          <div className="team-info-row">
-            <span className="label">Status</span>
-            <span className="value">{team.is_locked ? 'Locked' : 'Open'}</span>
-          </div>
-
+      {/* 4 - Join requests (leader only) */}
+      {isLeader && joinRequests.length > 0 && (
+        <div className="dash-card" style={{ marginTop: '20px' }}>
+          <h3>Join requests ({joinRequests.length})</h3>
+          {actionError && <div className="auth-error-banner" style={{ marginBottom: '12px' }}>{actionError}</div>}
           <div className="member-list">
-            {team.members.map(m => (
-              <div key={m.id} className="member-item">
-                <span className="member-name">{m.profile?.full_name ?? 'Unknown'}</span>
-                {m.user_id === team.leader_id && <span className="leader-tag">LEADER</span>}
+            {joinRequests.map(r => (
+              <div key={r.id} className="member-row">
+                <div className="member-info">
+                  <span className="member-name">Request #{r.id.substring(0, 8)}</span>
+                  <span className="member-github">Sent {new Date(r.created_at).toLocaleDateString()}</span>
+                </div>
+                <div className="member-actions">
+                  <button
+                    className="btn-primary btn-sm"
+                    disabled={actionBusy === r.id}
+                    onClick={() => handleRespond(r.id, 'approve')}
+                  >
+                    {actionBusy === r.id ? '...' : 'Approve'}
+                  </button>
+                  <button
+                    className="btn-text"
+                    disabled={actionBusy === r.id}
+                    onClick={() => handleRespond(r.id, 'reject')}
+                  >
+                    Reject
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         </div>
+      )}
 
-        <div className="dash-card">
-          <h3>Problem Statement</h3>
-          {team.problem_statement ? (
-            <>
-              <div className="team-info-row">
-                <span className="label">Title</span>
-                <span className="value">{team.problem_statement.title}</span>
-              </div>
-              <div className="team-info-row">
-                <span className="label">Category</span>
-                <span className="value">{team.problem_statement.category}</span>
-              </div>
-              <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', lineHeight: 1.6, marginTop: '12px' }}>
-                {team.problem_statement.description}
-              </p>
-              <Link href="/problem-statements" className="btn-text" style={{ marginTop: '16px' }}>
-                Change problem →
-              </Link>
-            </>
-          ) : (
-            <div style={{ textAlign: 'center', padding: '24px 0' }}>
-              <p style={{ color: 'var(--color-text-muted)', fontSize: '14px', marginBottom: '16px' }}>
-                No problem statement selected yet.
-              </p>
-              <Link href="/problem-statements" className="btn-primary btn-sm">
-                Select a problem →
-              </Link>
-            </div>
+      {/* 5 - Team members */}
+      <div className="dash-card" style={{ marginTop: '20px' }}>
+        <div className="team-card-header">
+          <h3>Team members ({memberCount}/{maxMembers})</h3>
+          {teamCode && (
+            <span className="team-code-chip" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{teamCode}</span>
           )}
         </div>
-      </div>
-
-      <div className="dash-card" style={{ marginBottom: '20px' }}>
-        <h3>Progress Tracker</h3>
-        <div className="progress-tracker">
-          <div className={`progress-step ${teamFormed ? 'complete' : ''}`}>
-            <div className="step-status">
-              <StatusBadge status={teamFormed ? 'SUBMITTED' : 'NOT_SUBMITTED'} />
-            </div>
-            <span className="step-label">Team Formed</span>
+        {memberCount < maxMembers && (
+          <div className="waiting-banner" style={{ marginBottom: '16px' }}>
+            <span>Share code <strong style={{ fontFamily: "'JetBrains Mono', monospace" }}>{teamCode}</strong> so teammates can request to join.</span>
           </div>
-          <div className={`progress-step ${aimSubmitted ? 'complete' : teamFormed ? 'active' : ''}`}>
-            <div className="step-status">
-              <StatusBadge status={aimSub?.status ?? 'NOT_SUBMITTED'} />
-            </div>
-            <span className="step-label">Aim Submitted</span>
-          </div>
-          <div className={`progress-step ${finalSubmitted ? 'complete' : ''}`}>
-            <div className="step-status">
-              <StatusBadge status={finalSub?.status ?? 'NOT_SUBMITTED'} />
-            </div>
-            <span className="step-label">Final Submitted</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="dash-grid">
-        <div className="dash-card">
-          <h3>Submission 1: Aim + PPT</h3>
-          {aimSub && aimSub.submitted_at ? (
-            <>
-              <div className="team-info-row">
-                <span className="label">Status</span>
-                <StatusBadge status={aimSub.status} />
-              </div>
-              <div className="team-info-row">
-                <span className="label">Submitted</span>
-                <span className="value" style={{ fontSize: '12px', fontFamily: "'JetBrains Mono', monospace" }}>
-                  {new Date(aimSub.submitted_at).toLocaleString()}
+        )}
+        <div className="member-list">
+          {team.members.map(m => (
+            <div key={m.user_id} className="member-row">
+              {m.avatar_url ? (
+                <img src={m.avatar_url} alt="" referrerPolicy="no-referrer" className="member-avatar" />
+              ) : (
+                <span className="member-avatar member-avatar-fallback">&lt; / &gt;</span>
+              )}
+              <div className="member-info">
+                <span className="member-name">
+                  {m.full_name ?? 'Participant'}
+                  {m.is_leader && <span className="leader-chip">Leader</span>}
+                </span>
+                <span className="member-github">
+                  {m.github_username ? (
+                    <a href={m.github_url ?? `https://github.com/${m.github_username}`} target="_blank" rel="noopener noreferrer">
+                      @{m.github_username}
+                    </a>
+                  ) : '—'}
+                  {m.year && <> · {m.year}</>}
+                  {m.section && <> · Sec {m.section}</>}
                 </span>
               </div>
-              {aimSub.ppt_file_name && (
-                <div className="team-info-row">
-                  <span className="label">File</span>
-                  <span className="value" style={{ fontSize: '13px' }}>{aimSub.ppt_file_name}</span>
-                </div>
-              )}
-              {aimSub.feedback && (
-                <div className="feedback-panel" style={{ marginTop: '16px' }}>
-                  <h4>Feedback</h4>
-                  <p>{aimSub.feedback}</p>
-                  {aimSub.score !== null && <span className="feedback-score">{aimSub.score}/100</span>}
-                </div>
-              )}
-              <Link href="/submit/aim" className="btn-text" style={{ marginTop: '16px' }}>
-                Edit submission →
-              </Link>
-            </>
-          ) : (
-            <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <p style={{ color: 'var(--color-text-muted)', fontSize: '14px', marginBottom: '16px' }}>
-                Not submitted yet.
-              </p>
-              <Link href="/submit/aim" className="btn-primary btn-sm">
-                Go to submission →
-              </Link>
             </div>
-          )}
+          ))}
         </div>
-
-        <div className="dash-card">
-          <h3>Submission 2: Final App</h3>
-          {finalSub && finalSub.submitted_at ? (
-            <>
-              <div className="team-info-row">
-                <span className="label">Status</span>
-                <StatusBadge status={finalSub.status} />
-              </div>
-              <div className="team-info-row">
-                <span className="label">Submitted</span>
-                <span className="value" style={{ fontSize: '12px', fontFamily: "'JetBrains Mono', monospace" }}>
-                  {new Date(finalSub.submitted_at).toLocaleString()}
-                </span>
-              </div>
-              {finalSub.deployed_url && (
-                <div className="team-info-row">
-                  <span className="label">Deployed</span>
-                  <a href={finalSub.deployed_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-accent-secondary)', fontSize: '13px' }}>
-                    Open ↗
-                  </a>
-                </div>
-              )}
-              {finalSub.repo_url && (
-                <div className="team-info-row">
-                  <span className="label">Repo</span>
-                  <a href={finalSub.repo_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-accent-secondary)', fontSize: '13px' }}>
-                    Open ↗
-                  </a>
-                </div>
-              )}
-              {finalSub.feedback && (
-                <div className="feedback-panel" style={{ marginTop: '16px' }}>
-                  <h4>Feedback</h4>
-                  <p>{finalSub.feedback}</p>
-                  {finalSub.score !== null && <span className="feedback-score">{finalSub.score}/100</span>}
-                </div>
-              )}
-              <Link href="/submit/final" className="btn-text" style={{ marginTop: '16px' }}>
-                Edit submission →
-              </Link>
-            </>
-          ) : (
-            <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <p style={{ color: 'var(--color-text-muted)', fontSize: '14px', marginBottom: '16px' }}>
-                {aimSub?.submitted_at ? 'Not submitted yet.' : 'Complete Submission 1 first.'}
-              </p>
-              {aimSub?.submitted_at && (
-                <Link href="/submit/final" className="btn-primary btn-sm">
-                  Go to submission →
-                </Link>
-              )}
-            </div>
-          )}
-        </div>
+        <p className="form-hint" style={{ marginTop: '12px' }}>
+          Only public information is shown to teammates. Contact details stay private.
+        </p>
       </div>
     </div>
   );

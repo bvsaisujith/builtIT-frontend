@@ -10,6 +10,7 @@ interface AuthContextValue {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  profileCompleted: boolean;
   refreshProfile: () => Promise<void>;
 }
 
@@ -18,6 +19,7 @@ const AuthContext = createContext<AuthContextValue>({
   user: null,
   profile: null,
   loading: true,
+  profileCompleted: false,
   refreshProfile: async () => {},
 });
 
@@ -27,8 +29,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refreshProfile = useCallback(async () => {
-    if (!session?.user?.id) return;
+    const refreshProfile = useCallback(async () => {
+    if (!session?.user?.id) {
+      setProfile(null);
+      return;
+    }
     const { data } = await supabase
       .from('profiles')
       .select('*')
@@ -36,6 +41,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .maybeSingle();
     setProfile(data as Profile | null);
   }, [session?.user?.id]);
+
+  // Derived flag: profile is complete when profile_completed_at is set.
+  const profileCompleted =
+    profile?.profile_completed_at !== null && profile?.profile_completed_at !== undefined;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: s } }) => {
@@ -53,23 +62,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
+    useEffect(() => {
     if (user) {
-      (async () => {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .maybeSingle();
-        setProfile(data as Profile | null);
-      })();
+      refreshProfile();
     } else {
       setProfile(null);
     }
-  }, [user]);
+  }, [user, refreshProfile]);
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, loading, refreshProfile }}>
+    <AuthContext.Provider value={{ session, user, profile, loading, profileCompleted, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

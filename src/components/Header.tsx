@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase';
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, profile } = useAuth();
+  const { user, profile, profileCompleted } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -25,8 +25,10 @@ export default function Header() {
     ? [
         { href: '/dashboard', label: 'Dashboard' },
         { href: '/problem-statements', label: 'Problems' },
+        { href: '/teams', label: 'Teams' },
         { href: '/submit/aim', label: 'Submit Aim' },
         { href: '/submit/final', label: 'Submit Final' },
+        ...(profile?.role === 'admin' ? [{ href: '/admin', label: 'Admin' }] : []),
       ]
     : [
         { href: '/#about', label: 'The Event' },
@@ -58,13 +60,25 @@ export default function Header() {
         <div className="nav-actions">
           {user ? (
             <>
-              <span className="user-name">{profile?.full_name ?? user.email}</span>
+              {!profileCompleted && pathname !== '/complete-profile' && (
+                <Link href="/complete-profile" className="btn-secondary btn-sm">Complete profile</Link>
+              )}
+              {profile?.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  style={{ width: 30, height: 30, borderRadius: '50%' }}
+                />
+              ) : null}
+              <span className="user-name">
+                {profile?.github_username ? `@${profile.github_username}` : profile?.full_name ?? user.email}
+              </span>
               <button className="btn-text" onClick={handleLogout}>Log out</button>
             </>
           ) : (
             <>
-              <Link href="/login" className="btn-text">Log in</Link>
-              <Link href="/signup" className="btn-primary btn-sm">Sign up <span>↗</span></Link>
+              <Link href="/login" className="btn-primary btn-sm">Join with GitHub <span>↗</span></Link>
             </>
           )}
           <button

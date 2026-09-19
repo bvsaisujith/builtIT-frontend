@@ -1,3 +1,4 @@
+// === Problem domain categories (legacy, kept for UI consistency) ===
 export type Category =
   | 'Cyber Security'
   | 'Cloud'
@@ -28,43 +29,105 @@ export type SubmissionStatus =
 
 export type SubmissionStage = 'AIM' | 'FINAL';
 
+// === Profile (migration 006) ===
+export type UserRole = 'participant' | 'admin';
+
 export interface Profile {
   id: string;
-  email: string;
+  email: string | null;          // nullable: GitHub OAuth may not expose email
   full_name: string;
-  roll_number: string;
-  phone: string;
+  roll_number: string | null;    // nullable until /complete-profile
+  phone: string | null;          // nullable until /complete-profile
   github_username: string | null;
+  github_url: string | null;
+  avatar_url: string | null;
+  year: string | null;           // collected at /complete-profile
+  section: string | null;        // collected at /complete-profile
+  profile_completed_at: string | null;
+  role: UserRole;
   created_at: string;
 }
 
+// === Domain (migration 006, requirement 7) ===
+export interface Domain {
+  id: string;
+  name: string;
+  slug: string;
+  short_label: string | null;
+  description: string | null;
+  icon: string | null;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export type DomainWithProblemCount = Domain & {
+  problem_count: number;
+};
+
+// === Problem Statement (migration 006) ===
+export interface ProblemStatement {
+  id: string;
+  team_id: string | null;       // null = curated/open
+  title: string;
+  description: string | null;
+  category: string | null;      // legacy mirror of domain name
+  domain_id: string;
+  is_active: boolean;           // requirement 15
+  display_order: number;
+  created_at: string;
+}
+
+export interface ProblemStatementWithDomain extends ProblemStatement {
+  domain: Domain;
+}
+
+// === Teams (migration 006) ===
 export interface Team {
   id: string;
   name: string;
-  category: Category;
+  team_code: string | null;     // requirement 10: BIT-XXXXXX
+  category: string | null;       // legacy mirror
+  domain_id: string | null;
+  problem_statement_id: string | null;
   leader_id: string;
   is_locked: boolean;
   created_at: string;
 }
 
-export interface TeamMember {
+export interface TeamConfig {
+  max_team_size: number;
+}
+
+// === Team Member (RPC output — public fields only, requirement 17) ===
+export interface TeamMemberPublic {
+  id: string;
+  user_id: string;
+  full_name: string | null;
+  github_username: string | null;
+  github_url: string | null;
+  avatar_url: string | null;
+  year: string | null;
+  section: string | null;
+  is_leader: boolean;
+  joined_at: string;
+}
+
+// === Team Join Request (migration 006, requirement 8) ===
+export type JoinRequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+
+export interface TeamJoinRequest {
   id: string;
   team_id: string;
-  user_id: string;
-  joined_at: string;
-  profile: Pick<Profile, 'id' | 'full_name' | 'email'>;
-}
-
-export interface ProblemStatement {
-  id: string;
-  team_id: string | null;
-  title: string;
-  description: string;
-  category: Category;
-  is_open: boolean;
+  requester_id: string;
+  message: string | null;
+  status: JoinRequestStatus;
   created_at: string;
+  responded_at: string | null;
+  responded_by: string | null;
 }
 
+// === Submission (unchanged) ===
 export interface Submission {
   id: string;
   team_id: string;
@@ -82,18 +145,28 @@ export interface Submission {
   created_at: string;
 }
 
+// === Event Config (migration 006) ===
 export interface EventConfig {
   id: number;
   aim_deadline: string | null;
   final_deadline: string | null;
   registration_open: boolean;
+  max_team_size: number;
 }
 
+// === Aggregated types ===
 export interface TeamWithDetails extends Team {
-  members: TeamMember[];
+  members: TeamMemberPublic[];
   problem_statement: ProblemStatement | null;
+  domain: Domain | null;
   submissions: {
     aim: Submission | null;
     final: Submission | null;
   };
+}
+
+export interface AuthCheck {
+  session: boolean;
+  profile: Profile | null;
+  role: UserRole;
 }
