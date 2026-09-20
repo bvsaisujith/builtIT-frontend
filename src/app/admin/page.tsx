@@ -4,22 +4,16 @@ import { useState, useEffect, type FormEvent } from 'react';
 import Link from 'next/link';
 import AdminGuard from '@/components/AdminGuard';
 import {
-  isAdmin,
-  getEventConfig,
-  updateEventConfig,
-  getAllDomains,
-  setDomainActive,
+  fetchAdminOverview,
+  saveEventConfig,
   createDomain,
-  getCuratedProblemStatements,
-  setProblemActive,
+  setDomainActive,
   createProblemStatement,
-  getAdminTeams,
-  getAdminParticipants,
+  setProblemActive,
   adminDeleteTeam,
   adminDeleteParticipant,
-  type AdminTeamRow,
-  type AdminParticipantRow,
-} from '@/lib/data';
+} from '@/lib/admin-client';
+import type { AdminTeamRow, AdminParticipantRow } from '@/lib/data';
 import type { Domain, ProblemStatement, EventConfig } from '@/lib/types';
 
 function AdminContent() {
@@ -40,12 +34,13 @@ function AdminContent() {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const reload = async () => {
-    const [cfg, doms, teamsRows, parts] = await Promise.all([
-      getEventConfig(),
-      getAllDomains(),
-      getAdminTeams(),
-      getAdminParticipants(),
-    ]);
+    const data = await fetchAdminOverview();
+    if (!data) {
+      setError('Could not load admin data. Check the server configuration.');
+      setLoading(false);
+      return;
+    }
+    const cfg = data.config;
     if (cfg) {
       setConfig(cfg);
       setAimDeadline(cfg.aim_deadline ? cfg.aim_deadline.slice(0, 16) : '');
@@ -53,16 +48,15 @@ function AdminContent() {
       setRegOpen(cfg.registration_open);
       setMaxSize(cfg.max_team_size);
     }
-    setDomains(doms);
-    setTeams(teamsRows);
-    setParticipants(parts);
-    setProblems(await getCuratedProblemStatements());
+    setDomains(data.domains);
+    setTeams(data.teams);
+    setParticipants(data.participants);
+    setProblems(data.problems);
     setLoading(false);
   };
 
   useEffect(() => {
     (async () => {
-      if (!(await isAdmin())) { setError('Admin access required.'); setLoading(false); return; }
       await reload();
     })();
   }, []);
@@ -95,7 +89,7 @@ function AdminContent() {
   const handleSaveConfig = async (ev: FormEvent) => {
     ev.preventDefault();
     setError(null); setOk(null);
-    const { error: err } = await updateEventConfig({
+    const { error: err } = await saveEventConfig({
       aim_deadline: aimDeadline ? new Date(aimDeadline).toISOString() : null,
       final_deadline: finalDeadline ? new Date(finalDeadline).toISOString() : null,
       registration_open: regOpen,

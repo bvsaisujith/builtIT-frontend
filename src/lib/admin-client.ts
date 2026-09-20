@@ -1,0 +1,98 @@
+// ---------------------------------------------------------------------------
+// Admin console client - talks to the cookie-protected /api/admin/* routes.
+// ---------------------------------------------------------------------------
+// The admin console page uses THIS module instead of data.ts: the standalone
+// (username/password) admin has no Supabase user, so RLS-protected browser
+// queries would fail. Both admin kinds (cookie-based and GitHub-based) hold
+// the admin session cookie, so the API works for everyone.
+// ---------------------------------------------------------------------------
+
+import type { Domain, EventConfig, ProblemStatement } from './types';
+import type { AdminParticipantRow, AdminTeamRow } from './data';
+
+export interface AdminOverview {
+  config: EventConfig | null;
+  domains: Domain[];
+  problems: ProblemStatement[];
+  teams: AdminTeamRow[];
+  participants: AdminParticipantRow[];
+}
+
+export async function checkAdminSession(): Promise<boolean> {
+  try {
+    const response = await fetch('/api/admin/session', { cache: 'no-store' });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function postJson(url: string, body: unknown): Promise<{ error: string | null }> {
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      return { error: payload?.error ?? `Request failed (${response.status}).` };
+    }
+    return { error: null };
+  } catch {
+    return { error: 'Could not reach the server. Try again.' };
+  }
+}
+
+async function postAction(payload: Record<string, unknown>): Promise<{ error: string | null }> {
+  return postJson('/api/admin/actions', payload);
+}
+
+export async function fetchAdminOverview(): Promise<AdminOverview | null> {
+  try {
+    const response = await fetch('/api/admin/overview', { cache: 'no-store' });
+    if (!response.ok) return null;
+    return (await response.json()) as AdminOverview;
+  } catch {
+    return null;
+  }
+}
+
+export function saveEventConfig(
+  values: {
+    aim_deadline?: string | null;
+    final_deadline?: string | null;
+    registration_open?: boolean;
+    max_team_size?: number;
+  },
+): Promise<{ error: string | null }> {
+  return postJson('/api/admin/event-config', values);
+}
+
+export function createDomain(
+  values: { name: string; slug: string; short_label?: string | null },
+): Promise<{ error: string | null }> {
+  return postAction({ action: 'create_domain', ...values });
+}
+
+export function setDomainActive(id: string, isActive: boolean): Promise<{ error: string | null }> {
+  return postAction({ action: 'set_domain_active', id, is_active: isActive });
+}
+
+export function createProblemStatement(
+  values: { title: string; description: string; domain_id: string },
+): Promise<{ error: string | null }> {
+  return postAction({ action: 'create_problem', ...values });
+}
+
+export function setProblemActive(id: string, isActive: boolean): Promise<{ error: string | null }> {
+  return postAction({ action: 'set_problem_active', id, is_active: isActive });
+}
+
+export function adminDeleteTeam(teamId: string): Promise<{ error: string | null }> {
+  return postAction({ action: 'delete_team', id: teamId });
+}
+
+export function adminDeleteParticipant(userId: string): Promise<{ error: string | null }> {
+  return postAction({ action: 'delete_participant', id: userId });
+}

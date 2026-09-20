@@ -15,6 +15,16 @@
   --color-border: rgba(0, 80, 255, 0.25);
   --color-border-subtle: rgba(102, 151, 221, 0.15);
 
+  /* Layout & motion tokens */
+  --container-max: 1180px;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --motion-fast: 180ms;
+  --motion-base: 320ms;
+  --motion-slow: 700ms;
+  --stagger-step: 70ms;
+  --reveal-delay: 0ms;
+
   font-family: 'Inter', system-ui, sans-serif;
   color: var(--color-text-primary);
   background: var(--color-bg);
@@ -89,9 +99,9 @@ h1, h2, h3, h4 {
 }
 
 .section-frame {
-  max-width: 1140px;
+  max-width: var(--container-max);
   margin: 0 auto;
-  padding: 100px 24px;
+  padding: clamp(72px, 11vw, 120px) 24px;
 }
 
 /* ===== Buttons ===== */
@@ -313,7 +323,7 @@ h1, h2, h3, h4 {
 .hidden { display: none; }
 
 @media (max-width: 768px) {
-  .section-frame { padding: 60px 20px; }
+  .section-frame { padding: clamp(56px, 12vw, 80px) 20px; }
 }
 
 /* ===== Header ===== */
@@ -481,6 +491,9 @@ h1, h2, h3, h4 {
 .hero-section {
   min-height: calc(100vh - 70px);
   position: relative;
+  /* Clips the decorative .cityscape bleed so it can never create a
+     horizontal scrollbar (it is 150% wide on small screens). */
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -617,11 +630,17 @@ h1, h2, h3, h4 {
 .cityscape {
   position: absolute;
   bottom: 0;
+  /* Explicit symmetric centring: the skyline bleeds evenly off both edges
+     instead of relying on the flex static position. */
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   align-items: flex-end;
+  justify-content: center;
   gap: 6px;
   height: 120px;
   width: 60%;
+  max-width: 640px;
   opacity: 0.4;
   pointer-events: none;
 }
@@ -1832,3 +1851,499 @@ h1, h2, h3, h4 {
     grid-template-columns: 1fr 1fr;
   }
 }
+/* ============================================================
+   MOTION SYSTEM — scroll reveals, fluid ambience, hover polish
+   ============================================================ */
+
+/* --- Scroll reveal base (gated behind html.js so no-JS users see everything) ---
+   NOTE: the html.js gate is wrapped in :where() so it contributes zero
+   specificity. This lets element-level hover/active transforms (e.g.
+   .category-card:hover) win over the reveal transform once revealed. */
+:where(html.js) [data-reveal] {
+  opacity: 0;
+  transform: translateY(30px);
+  transition:
+    opacity var(--motion-slow) var(--ease-out),
+    transform var(--motion-slow) var(--ease-out);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+:where(html.js) [data-reveal].revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Staggered cascade for container children (RevealProvider sets --i per child) */
+:where(html.js) [data-reveal-stagger] > * {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.7s var(--ease-out),
+    transform 0.7s var(--ease-out);
+  transition-delay: calc(var(--stagger-step, 70ms) * var(--i, 0));
+}
+
+:where(html.js) [data-reveal-stagger].revealed > * {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* --- Keyframes --- */
+@keyframes barRise {
+  from { transform: scaleY(0); opacity: 0; }
+  to   { transform: scaleY(1); opacity: 1; }
+}
+
+@keyframes glowBreathe {
+  0%, 100% { opacity: 0.6; box-shadow: 0 0 60px 20px rgba(0, 80, 255, 0.28); }
+  50%      { opacity: 1;   box-shadow: 0 0 95px 34px rgba(0, 115, 255, 0.42); }
+}
+
+@keyframes gridDrift {
+  from { background-position: 0 0, 0 0; }
+  to   { background-position: 120px 0, 0 120px; }
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+
+@keyframes arrowPulse {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(3px, -3px); }
+}
+
+@keyframes softPulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.72; }
+}
+
+/* --- Hero ambient motion --- */
+.hero-glow {
+  animation: glowBreathe 7s ease-in-out infinite;
+}
+
+.circuit-lines {
+  animation: gridDrift 26s linear infinite;
+}
+
+.hero-section h1 span {
+  background-size: 200% 200%;
+  animation: gradientShift 6s ease-in-out infinite;
+}
+
+.cityscape i {
+  transform-origin: bottom;
+  animation: barRise 0.9s var(--ease-out) backwards;
+}
+.cityscape i:nth-child(1) { animation-delay: 0.95s; }
+.cityscape i:nth-child(2) { animation-delay: 0.55s; }
+.cityscape i:nth-child(3) { animation-delay: 0.75s; }
+.cityscape i:nth-child(4) { animation-delay: 0.4s; }
+.cityscape i:nth-child(5) { animation-delay: 0.2s; }
+.cityscape i:nth-child(6) { animation-delay: 0.65s; }
+.cityscape i:nth-child(7) { animation-delay: 0.45s; }
+.cityscape i:nth-child(8) { animation-delay: 0.85s; }
+.cityscape i:nth-child(9) { animation-delay: 0.6s; }
+
+.hero-tagline span {
+  display: inline-block;
+  animation: softPulse 4.5s ease-in-out infinite;
+}
+
+/* --- Interaction polish: buttons --- */
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary));
+  box-shadow: 0 0 0 rgba(0, 100, 255, 0);
+  transition:
+    transform var(--motion-base) var(--ease-spring),
+    box-shadow var(--motion-base) var(--ease-out),
+    filter var(--motion-base) var(--ease-out);
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 32px rgba(0, 100, 255, 0.35);
+  filter: brightness(1.08);
+}
+.btn-primary:active { transform: translateY(0) scale(0.97); }
+
+.btn-secondary {
+  transition:
+    transform var(--motion-base) var(--ease-spring),
+    background var(--motion-base) var(--ease-out),
+    border-color var(--motion-base) var(--ease-out);
+}
+.btn-secondary:hover {
+  background: rgba(0, 80, 255, 0.12);
+  border-color: var(--color-accent-secondary);
+  transform: translateY(-2px);
+}
+.btn-secondary:active { transform: scale(0.97); }
+
+.btn-text { transition: color var(--motion-base) var(--ease-out); }
+.btn-text span, .arrow-link span, .btn-primary span {
+  display: inline-block;
+  transition: transform var(--motion-base) var(--ease-out);
+}
+.btn-primary:hover span, .arrow-link:hover span { transform: translate(3px, -3px); }
+.btn-text:hover span { transform: translateY(3px); }
+
+.arrow-link { transition: color var(--motion-base) var(--ease-out), border-color var(--motion-base) var(--ease-out); }
+.arrow-link:hover { border-color: var(--color-accent-secondary); }
+
+/* --- Interaction polish: navigation --- */
+.nav-link { position: relative; }
+.nav-link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -6px;
+  height: 1px;
+  width: 100%;
+  background: var(--color-accent-secondary);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--motion-base) var(--ease-out);
+}
+.nav-link:hover::after, .nav-link.active::after { transform: scaleX(1); }
+
+/* --- Interaction polish: cards & grids --- */
+.card {
+  transition:
+    border-color var(--motion-base) var(--ease-out),
+    box-shadow var(--motion-base) var(--ease-out);
+}
+.card:hover {
+  border-color: var(--color-border);
+  box-shadow: 0 12px 40px rgba(0, 60, 180, 0.14);
+}
+
+.category-card { overflow: hidden; }
+.category-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(240px circle at 50% 0%, rgba(0, 120, 255, 0.16), transparent 65%);
+  opacity: 0;
+  transition: opacity var(--motion-base) var(--ease-out);
+  pointer-events: none;
+}
+.category-card:hover::before { opacity: 1; }
+.category-card .category-icon {
+  transition: transform var(--motion-base) var(--ease-spring);
+}
+.category-card:hover .category-icon { transform: translateY(-4px) scale(1.1); }
+.category-card:hover .category-number { color: var(--color-accent-secondary); transition: color var(--motion-base) var(--ease-out); }
+.category-card:hover { transform: translateY(-3px); transition: background 0.25s, transform var(--motion-base) var(--ease-spring); }
+
+.process-arrow { transition: transform var(--motion-base) var(--ease-out); }
+.process-card h3 { transition: color var(--motion-base) var(--ease-out); }
+.process-card:hover .process-arrow { transform: translate(4px, -4px); }
+.process-card:hover h3 { color: var(--color-accent-secondary); }
+
+.hero-stats > div { transition: background var(--motion-base) var(--ease-out); }
+.hero-stats > div:hover { background: rgba(0, 60, 180, 0.08); }
+
+/* --- Interaction polish: forms --- */
+.form-input, .form-textarea {
+  transition: border-color var(--motion-fast) var(--ease-out), box-shadow var(--motion-fast) var(--ease-out);
+}
+.form-input:focus, .form-textarea:focus {
+  box-shadow: 0 0 0 3px rgba(0, 80, 255, 0.18);
+}
+
+/* --- Alignment refinements --- */
+@media (max-width: 768px) {
+  .hero-stats > div { text-align: center; }
+  .hero-stats > div:nth-child(2n) { border-right: none; }
+}
+
+/* --- Global niceties --- */
+html { -webkit-tap-highlight-color: transparent; }
+
+::selection {
+  background: rgba(0, 100, 255, 0.35);
+  color: #fff;
+}
+
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-track { background: var(--color-bg); }
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 80, 255, 0.3);
+  border-radius: 8px;
+  border: 2px solid var(--color-bg);
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(0, 120, 254, 0.5); }
+
+/* --- Accessibility: respect reduced-motion preferences --- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  html { scroll-behavior: auto; }
+  :where(html.js) [data-reveal],
+  :where(html.js) [data-reveal-stagger] > * {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ============================================================
+   LOGIN PAGE — brand lockup, ambient glow, icon inputs
+   (Additive polish; the shared .auth-* classes keep working for
+   complete-profile and AdminGuard.)
+   ============================================================ */
+
+/* Containing block + clip for the decorative glow behind the card */
+.auth-page {
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 540px;
+  height: 540px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(0, 90, 255, 0.2), transparent 62%);
+  filter: blur(26px);
+  pointer-events: none;
+  animation: glowBreathe 9s ease-in-out infinite;
+}
+
+/* --- Card: lifted, gradient hairline, deeper shadow --- */
+.login-card {
+  position: relative;
+  z-index: 1;
+  max-width: 460px;
+  padding: 38px 36px 26px;
+  border-radius: 14px;
+  border-color: rgba(0, 80, 255, 0.28);
+  background:
+    linear-gradient(180deg, rgba(0, 80, 255, 0.07), transparent 42%),
+    var(--color-bg-elevated);
+  box-shadow: 0 30px 80px -28px rgba(0, 45, 130, 0.75);
+}
+
+.login-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 14px 14px 0 0;
+  background: var(--color-accent-gradient);
+  opacity: 0.85;
+}
+
+/* Pure-CSS entrance (no JS): keeps this client component hydration-safe,
+   unlike the MutationObserver-driven [data-reveal] system. */
+.login-card {
+  animation: cardIn 760ms var(--ease-out) both;
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(22px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.login-head > * { animation: fadeUp var(--motion-slow) var(--ease-out) both; }
+.login-head > :nth-child(1) { animation-delay: 120ms; }
+.login-head > :nth-child(2) { animation-delay: 190ms; }
+.login-head > :nth-child(3) { animation-delay: 250ms; }
+.login-head > :nth-child(4) { animation-delay: 310ms; }
+
+.login-card > .auth-form,
+.login-card > .auth-divider,
+.login-card > .login-oauth,
+.login-card > .auth-footer,
+.login-card > .login-meta {
+  animation: fadeUp var(--motion-slow) var(--ease-out) both;
+  animation-delay: 370ms;
+}
+
+/* --- Brand lockup + centred heading block --- */
+.login-head { text-align: center; }
+
+.login-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.login-brand .brand-logo {
+  width: 96px;
+  height: 34px;
+  border-radius: 4px;
+  box-shadow: 0 6px 20px -8px rgba(0, 90, 255, 0.6);
+}
+
+.login-brand .brand-bracket { font-size: 22px; }
+
+.login-eyebrow { display: block; margin-bottom: 14px; }
+
+.login-card h1 {
+  font-size: clamp(28px, 7vw, 36px);
+  margin-bottom: 8px;
+}
+
+.login-card .auth-subtitle { margin-bottom: 26px; }
+
+/* --- "or" divider (previously unstyled) --- */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 22px 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-border-subtle), transparent);
+}
+
+.auth-divider span {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* --- Error banner: glyph + slide-in --- */
+.auth-error-banner.login-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  animation: errSlide var(--motion-base) var(--ease-out) both;
+}
+
+.auth-error-banner.login-error span { line-height: 1.45; }
+
+.icon-alert {
+  flex: none;
+  width: 19px;
+  height: 19px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.18);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@keyframes errSlide {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* --- Inputs with leading icon + trailing toggle --- */
+.input-shell {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-shell .form-input {
+  flex: 1;
+  width: 100%;
+}
+
+.form-input.has-icon { padding-left: 42px; }
+.form-input.has-trailing { padding-right: 70px; }
+
+.input-icon {
+  position: absolute;
+  left: 14px;
+  display: inline-flex;
+  color: var(--color-text-muted);
+  pointer-events: none;
+  transition: color var(--motion-base) var(--ease-out);
+}
+
+.input-shell:focus-within .input-icon { color: var(--color-accent-secondary); }
+
+.input-toggle {
+  position: absolute;
+  right: 8px;
+  padding: 6px 9px;
+  background: none;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition:
+    color var(--motion-fast) var(--ease-out),
+    background var(--motion-fast) var(--ease-out);
+}
+
+.input-toggle:hover {
+  color: var(--color-accent-secondary);
+  background: rgba(0, 80, 255, 0.12);
+}
+
+/* --- Buttons: full width, loading spinner --- */
+.login-submit,
+.login-oauth {
+  width: 100%;
+  justify-content: center;
+}
+
+.spinner {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* --- Mono meta strip --- */
+.login-meta {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border-subtle);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 480px) {
+  .login-card { padding: 30px 20px 22px; border-radius: 12px; }
+  .login-brand .brand-logo { width: 84px; height: 30px; }
+  .auth-glow { width: 380px; height: 380px; }
+  .form-input.has-trailing { padding-right: 62px; }
+}
+

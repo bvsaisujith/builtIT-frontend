@@ -14,7 +14,7 @@ import {
   getTeamCode,
   getPendingJoinRequests,
   respondToJoinRequest,
-  type JoinRequest,
+  type PendingJoinRequest,
 } from '@/lib/data';
 import type { TeamWithDetails, EventConfig } from '@/lib/types';
 
@@ -24,7 +24,7 @@ function DashboardContent() {
   const [team, setTeam] = useState<TeamWithDetails | null>(null);
   const [config, setConfig] = useState<EventConfig | null>(null);
   const [isLeader, setIsLeader] = useState(false);
-  const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
+  const [joinRequests, setJoinRequests] = useState<PendingJoinRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionBusy, setActionBusy] = useState<string | null>(null);
@@ -177,9 +177,28 @@ function DashboardContent() {
           <div className="member-list">
             {joinRequests.map(r => (
               <div key={r.id} className="member-row">
+                {r.avatar_url ? (
+                  <img src={r.avatar_url} alt="" referrerPolicy="no-referrer" className="member-avatar" />
+                ) : (
+                  <span className="member-avatar member-avatar-fallback">&lt; / &gt;</span>
+                )}
                 <div className="member-info">
-                  <span className="member-name">Request #{r.id.substring(0, 8)}</span>
-                  <span className="member-github">Sent {new Date(r.created_at).toLocaleDateString()}</span>
+                  <span className="member-name">
+                    {r.full_name?.trim() || r.github_username || 'New participant'}
+                  </span>
+                  <span className="member-github">
+                    {r.github_username ? (
+                      <a
+                        href={r.github_url ?? `https://github.com/${r.github_username}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        @{r.github_username}
+                      </a>
+                    ) : '—'}
+                    {<> · Sent {new Date(r.created_at).toLocaleDateString()}</>}
+                  </span>
+                  {r.message && <span className="member-github">&ldquo;{r.message}&rdquo;</span>}
                 </div>
                 <div className="member-actions">
                   <button

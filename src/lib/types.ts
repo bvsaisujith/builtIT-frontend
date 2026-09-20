@@ -135,6 +135,7 @@ export interface Submission {
   aim_summary: string | null;
   ppt_file_path: string | null;
   ppt_file_name: string | null;
+  ppt_drive_url: string | null; // Google Drive link (replaces file upload)
   deployed_url: string | null;
   repo_url: string | null;
   demo_video_url: string | null;

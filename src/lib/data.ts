@@ -223,14 +223,23 @@ export interface JoinRequest {
   responded_by: string | null;
 }
 
-export async function getPendingJoinRequests(teamId: string): Promise<JoinRequest[]> {
-  const { data } = await supabase
-    .from('team_join_requests')
-    .select('*')
-    .eq('team_id', teamId)
-    .eq('status', 'pending')
-    .order('created_at', { ascending: true });
-  return (data ?? []) as JoinRequest[];
+// A pending join request enriched with the requester's PUBLIC profile fields
+// (name, GitHub identity, avatar). Served by the SECURITY DEFINER RPC
+// get_pending_join_requests_public (migration 010) because profiles SELECT is
+// self-only - without the RPC the leader would only see a raw requester UUID.
+export interface PendingJoinRequest extends JoinRequest {
+  full_name: string | null;
+  github_username: string | null;
+  github_url: string | null;
+  avatar_url: string | null;
+}
+
+export async function getPendingJoinRequests(teamId: string): Promise<PendingJoinRequest[]> {
+  const { data, error } = await supabase.rpc('get_pending_join_requests_public', {
+    p_team_id: teamId,
+  });
+  if (error) return [];
+  return (data ?? []) as unknown as PendingJoinRequest[];
 }
 
 export async function createJoinRequest(

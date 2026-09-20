@@ -5,17 +5,26 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AuthGuard from '@/components/AuthGuard';
 import Countdown from '@/components/Countdown';
-import FileUpload from '@/components/FileUpload';
 import { supabase } from '@/lib/supabase';
 import { getMyTeam, getEventConfig } from '@/lib/data';
 import type { TeamWithDetails, EventConfig } from '@/lib/types';
+
+// Only Google Drive links are accepted for the presentation deck.
+function isGoogleDriveUrl(value: string): boolean {
+  try {
+    const host = new URL(value).hostname.toLowerCase();
+    return host === 'drive.google.com' || host === 'docs.google.com';
+  } catch {
+    return false;
+  }
+}
 
 function AimSubmitContent() {
   const router = useRouter();
   const [team, setTeam] = useState<TeamWithDetails | null>(null);
   const [config, setConfig] = useState<EventConfig | null>(null);
   const [aimSummary, setAimSummary] = useState('');
-  const [file, setFile] = useState<File | null>(null);
+  const [driveUrl, setDriveUrl] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +39,7 @@ function AimSubmitContent() {
       setConfig(cfg);
       if (myTeam.submissions.aim) {
         setAimSummary(myTeam.submissions.aim.aim_summary ?? '');
+        setDriveUrl(myTeam.submissions.aim.ppt_drive_url ?? '');
       }
       setLoading(false);
     })();
@@ -44,35 +54,23 @@ function AimSubmitContent() {
     if (!team) return;
     setError(null);
     if (!aimSummary.trim()) { setError('Please write your aim summary.'); return; }
-    if (!file && !team.submissions.aim?.ppt_file_path) { setError('Please upload your PPT file.'); return; }
 
-    setSubmitting(true);
-    let filePath = team.submissions.aim?.ppt_file_path ?? null;
-    let fileName = team.submissions.aim?.ppt_file_name ?? null;
-
-    if (file) {
-      const ext = file.name.split('.').pop();
-      const path = `teams/${team.id}/aim-presentation.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from('submissions')
-        .upload(path, file, { upsert: true });
-      if (uploadError) {
-        setError(`Upload failed: ${uploadError.message}`);
-        setSubmitting(false);
-        return;
-      }
-      filePath = path;
-      fileName = file.name;
+    const link = driveUrl.trim();
+    if (!link) { setError('Please paste your Google Drive link for the presentation.'); return; }
+    if (!isGoogleDriveUrl(link)) {
+      setError('The link must be a Google Drive link (drive.google.com or docs.google.com). Make sure sharing is set to "Anyone with the link".');
+      return;
     }
 
+    setSubmitting(true);
     const existing = team.submissions.aim;
+
     if (existing) {
       const { error: updateError } = await supabase
         .from('submissions')
         .update({
           aim_summary: aimSummary,
-          ppt_file_path: filePath,
-          ppt_file_name: fileName,
+          ppt_drive_url: link,
           status: 'SUBMITTED',
           submitted_at: new Date().toISOString(),
         })
@@ -85,8 +83,7 @@ function AimSubmitContent() {
           team_id: team.id,
           stage: 'AIM',
           aim_summary: aimSummary,
-          ppt_file_path: filePath,
-          ppt_file_name: fileName,
+          ppt_drive_url: link,
           status: 'SUBMITTED',
           submitted_at: new Date().toISOString(),
         });
@@ -111,8 +108,8 @@ function AimSubmitContent() {
   return (
     <div className="submit-page">
       <Link href="/dashboard" className="btn-text" style={{ marginBottom: '16px' }}>← Dashboard</Link>
-      <h1>Submission 1: Aim + PPT</h1>
-      <p className="subtitle">Describe your aim and upload your presentation deck.</p>
+      <h1>Submission 1: Aim + Presentation</h1>
+      <p className="subtitle">Describe your aim and share your presentation deck via a Google Drive link.</p>
 
       {config?.aim_deadline && (
         <Countdown deadline={config.aim_deadline} label="Aim submission deadline" />
@@ -128,7 +125,7 @@ function AimSubmitContent() {
         <div className="submit-success">
           <h4>Submitted successfully</h4>
           <p>
-            File: {existing.ppt_file_name ?? file?.name}<br />
+            Presentation: <a href={existing.ppt_drive_url ?? driveUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-accent-secondary)' }}>{existing.ppt_drive_url ?? driveUrl}</a><br />
             Submitted at: {new Date(existing.submitted_at ?? Date.now()).toLocaleString()}
           </p>
         </div>
@@ -149,13 +146,19 @@ function AimSubmitContent() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Presentation (PPT/PPTX)</label>
-            <FileUpload
-              onFileSelect={setFile}
-              accept=".ppt,.pptx"
-              currentFileName={existing?.ppt_file_name}
-              maxSizeMB={50}
+            <label className="form-label">Presentation (Google Drive link)</label>
+            <input
+              className="form-input"
+              type="url"
+              value={driveUrl}
+              onChange={e => setDriveUrl(e.target.value)}
+              placeholder="https://drive.google.com/file/d/..."
+              required
             />
+            <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '6px' }}>
+              Upload your PPT to Google Drive and paste the share link here. Set sharing to
+              “Anyone with the link” so the organizers can open it.
+            </p>
           </div>
 
           {error && <div className="auth-error-banner">{error}</div>}
@@ -173,7 +176,12 @@ function AimSubmitContent() {
             {existing.aim_summary}
           </p>
           <p style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
-            File: {existing.ppt_file_name}
+            Presentation:{' '}
+            {existing.ppt_drive_url ? (
+              <a href={existing.ppt_drive_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-accent-secondary)' }}>{existing.ppt_drive_url}</a>
+            ) : (
+              existing.ppt_file_name ?? '—'
+            )}
           </p>
         </div>
       )}
