@@ -34,16 +34,16 @@ interface Developer {
 
 const DEVELOPERS: Developer[] = [
   {
-    name: 'Sai Sujith BV',
-    initials: 'SJ',
+    name: 'Sai Sujith Bandlapalli Venkatarathnam',
+    initials: 'BVSS',
     github: 'https://github.com/bvsaisujith',
     linkedin: 'https://www.linkedin.com/in/sai-sujith-bv-bb582a385',
     email: 'bvsaisujith27@gmail.com',
   },
   {
-    name: 'Omprakash C',
-    initials: 'OP',
-    github: 'https://github.com/Om657-06',
+    name: 'Omprakash Chandragiri',
+    initials: 'OC',
+    github: 'https://github.com/omprakashchandragiri657-dot',
     linkedin: 'https://www.linkedin.com/in/omprakash-chandragiri-b60614390/',
     email: 'omprakashchandragiri657@gmail.com',
   },

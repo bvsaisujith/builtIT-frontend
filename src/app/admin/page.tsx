@@ -250,7 +250,16 @@ function AdminContent() {
       </div>
 
       <div className="dash-card" style={{ marginTop: '20px' }}>
-        <h3>Teams</h3>
+        <div className="team-card-header">
+          <h3>Teams</h3>
+          <Link
+            href="/admin/review"
+            className="btn-secondary"
+            style={{ padding: '8px 14px', fontSize: '12px' }}
+          >
+            Review submissions →
+          </Link>
+        </div>
         {teams.length === 0 ? (
           <p style={{ fontSize: '14px', color: 'var(--color-text-muted)' }}>No teams yet.</p>
         ) : (

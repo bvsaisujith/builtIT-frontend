@@ -55,6 +55,24 @@ export async function getMyTeam(): Promise<TeamWithDetails | null> {
   return getTeamById(membership.team_id);
 }
 
+/**
+ * Lightweight companion to getMyTeam(): returns just the caller's team id, or
+ * null when signed out / not yet in a team. Used by the team directory to pin
+ * the viewer's own team to the first page without loading the full team graph.
+ */
+export async function getMyTeamId(): Promise<string | null> {
+  const user = await getSessionUser();
+  if (!user) return null;
+
+  const { data: membership } = await supabase
+    .from('team_memberships')
+    .select('team_id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  return (membership?.team_id as string | undefined) ?? null;
+}
+
 export async function getTeamById(teamId: string): Promise<TeamWithDetails | null> {
   const { data: team } = await supabase
     .from('teams')

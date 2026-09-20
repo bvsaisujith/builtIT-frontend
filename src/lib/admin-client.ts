@@ -16,6 +16,61 @@ export interface AdminOverview {
   problems: ProblemStatement[];
   teams: AdminTeamRow[];
   participants: AdminParticipantRow[];
+  submissions: AdminSubmissionSummary[];
+}
+
+// One row per (team, stage) — summary fields only, for the review dashboard chips.
+export interface AdminSubmissionSummary {
+  team_id: string;
+  stage: 'AIM' | 'FINAL';
+  status: string;
+  submitted_at: string | null;
+}
+
+export interface AdminTeamMemberRow {
+  user_id: string;
+  is_leader: boolean;
+  joined_at: string | null;
+  profile: {
+    full_name: string | null;
+    email: string | null;
+    roll_number: string | null;
+    year: string | null;
+    section: string | null;
+    github_username: string | null;
+    avatar_url: string | null;
+  } | null;
+}
+
+// Full submission row for the team detail view.
+export interface AdminSubmissionRow {
+  id: string;
+  team_id: string;
+  stage: 'AIM' | 'FINAL';
+  aim_summary: string | null;
+  ppt_drive_url: string | null;
+  ppt_file_name: string | null;
+  deployed_url: string | null;
+  repo_url: string | null;
+  demo_video_url: string | null;
+  status: string;
+  submitted_at: string | null;
+  created_at: string;
+}
+
+export interface AdminTeamDetail {
+  team: {
+    id: string;
+    name: string;
+    team_code: string | null;
+    is_locked: boolean;
+    created_at: string;
+    domain: { name: string; slug: string } | null;
+    problem_statement: { title: string; description: string | null } | null;
+  } | null;
+  members: AdminTeamMemberRow[];
+  submissions: AdminSubmissionRow[];
+  deadlines: { aim_deadline: string | null; final_deadline: string | null } | null;
 }
 
 export async function checkAdminSession(): Promise<boolean> {
@@ -53,6 +108,16 @@ export async function fetchAdminOverview(): Promise<AdminOverview | null> {
     const response = await fetch('/api/admin/overview', { cache: 'no-store' });
     if (!response.ok) return null;
     return (await response.json()) as AdminOverview;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchAdminTeamDetail(teamId: string): Promise<AdminTeamDetail | null> {
+  try {
+    const response = await fetch(`/api/admin/teams/${teamId}`, { cache: 'no-store' });
+    if (!response.ok) return null;
+    return (await response.json()) as AdminTeamDetail;
   } catch {
     return null;
   }

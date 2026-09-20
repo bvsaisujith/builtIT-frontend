@@ -1865,6 +1865,138 @@ h1, h2, h3, h4 {
   margin-top: 6px;
 }
 
+/* --- Paginated listing wrapper --- */
+.teams-listing {
+  margin-top: 26px;
+  scroll-margin-top: 96px; /* clears the fixed site header when paging */
+}
+
+.teams-listing .directory-grid { margin-top: 0; }
+
+/* --- Pinned "your team" card + toolbar chip --- */
+.team-card.is-mine {
+  border-color: rgba(0, 154, 254, 0.45);
+  background:
+    linear-gradient(180deg, rgba(0, 80, 255, 0.09), rgba(0, 80, 255, 0) 58%),
+    var(--color-bg-elevated);
+}
+
+.team-card.is-mine::before { opacity: 1; }
+
+.meta-chip-you {
+  color: #fff;
+  font-weight: 600;
+  border-color: transparent;
+  background: var(--color-accent-gradient);
+}
+
+.teams-mine-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 154, 254, 0.4);
+  background: rgba(0, 80, 255, 0.12);
+  color: var(--color-accent-secondary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color var(--motion-fast) var(--ease-out),
+    background var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out);
+}
+
+.teams-mine-chip:hover:not(:disabled) {
+  border-color: var(--color-accent-secondary);
+  background: rgba(0, 80, 255, 0.2);
+  color: #fff;
+}
+
+.teams-mine-chip.current {
+  color: var(--color-text-secondary);
+  border-color: var(--color-border-subtle);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: default;
+}
+
+.teams-mine-chip:focus-visible { outline: 2px solid var(--color-accent-secondary); outline-offset: 2px; }
+
+/* --- Pagination --- */
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 30px;
+  padding-top: 22px;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 9px;
+  border: 1px solid var(--color-border-subtle);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--color-text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color var(--motion-fast) var(--ease-out),
+    background var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out);
+}
+
+.page-btn:hover:not(:disabled) {
+  border-color: var(--color-border);
+  color: #fff;
+}
+
+.page-btn.active {
+  color: #fff;
+  border-color: rgba(0, 154, 254, 0.55);
+  background: rgba(0, 80, 255, 0.16);
+}
+
+.page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.page-btn:focus-visible { outline: 2px solid var(--color-accent-secondary); outline-offset: 2px; }
+
+.page-btn-wide { padding: 0 14px; letter-spacing: 0.06em; }
+
+.page-gap {
+  min-width: 20px;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  .teams-listing { scroll-margin-top: 76px; }
+  .pagination { gap: 6px; margin-top: 24px; }
+  .page-btn { min-width: 32px; height: 32px; padding: 0 8px; font-size: 11px; }
+  .page-btn-wide { padding: 0 10px; }
+  .teams-mine-chip { font-size: 10px; padding: 6px 10px; }
+}
+
 @media (max-width: 640px) {
   .teams-page { padding: 32px 16px 64px; }
   .teams-hero { padding: 22px 18px; }
@@ -2306,6 +2438,101 @@ h1, h2, h3, h4 {
 @media (max-width: 900px) {
   .rules-list { grid-template-columns: 1fr; }
 }
+
+/* ============================== ADMIN REVIEW ============================== */
+.review-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.review-table th {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  white-space: nowrap;
+}
+
+.review-table td {
+  padding: 14px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  vertical-align: top;
+  color: var(--color-text-secondary);
+}
+
+.review-table tbody tr { transition: background var(--motion-fast) var(--ease-out); }
+.review-table tbody tr:hover { background: rgba(0, 60, 180, 0.06); }
+.review-table tbody tr:last-child td { border-bottom: none; }
+
+.review-team-link {
+  display: inline-block;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  transition: color var(--motion-fast) var(--ease-out);
+}
+
+.review-team-link:hover { color: var(--color-accent-secondary); }
+
+.review-sub {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+.review-problem { max-width: 260px; }
+
+.review-link {
+  color: var(--color-accent-secondary);
+  font-size: 13.5px;
+  transition: opacity var(--motion-fast) var(--ease-out);
+}
+
+.review-link:hover { opacity: 0.8; }
+
+.review-deadline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-left: 10px;
+}
+
+.sub-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sub-detail-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.sub-detail-label {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: 4px;
+}
+
+.sub-detail-row .sub-detail-label,
+.sub-detail-row .review-deadline { margin-bottom: 0; }
+
+.sub-detail-block .sub-detail-label { margin-bottom: 6px; }
 
 /* ============================================================
    MOTION SYSTEM — scroll reveals, fluid ambience, hover polish

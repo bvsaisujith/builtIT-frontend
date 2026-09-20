@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = createServiceRoleClient();
 
-    const [configResult, domainsResult, problemsResult, teamsResult, participantsResult] =
+    const [configResult, domainsResult, problemsResult, teamsResult, participantsResult, submissionsResult] =
       await Promise.all([
         supabase.from('event_config').select('*').eq('id', 1).maybeSingle(),
         supabase.from('domains').select('*').order('display_order', { ascending: true }),
@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
           )
           .order('created_at', { ascending: false }),
         supabase.from('profiles').select('*').order('created_at', { ascending: false }),
+        supabase.from('submissions').select('team_id, stage, status, submitted_at'),
       ]);
 
     const firstError = [
@@ -44,6 +45,7 @@ export async function GET(request: NextRequest) {
       problemsResult.error,
       teamsResult.error,
       participantsResult.error,
+      submissionsResult.error,
     ].find(Boolean);
     if (firstError) return NextResponse.json({ error: firstError.message }, { status: 500 });
 
@@ -64,6 +66,7 @@ export async function GET(request: NextRequest) {
       problems: problemsResult.data ?? [],
       teams,
       participants: participantsResult.data ?? [],
+      submissions: submissionsResult.data ?? [],
     });
   } catch (error) {
     return serverError(error);
