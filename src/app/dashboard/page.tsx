@@ -111,6 +111,7 @@ function DashboardContent() {
         <div className="dash-hero-actions">
           <Link href="/teams" className="btn-secondary btn-sm">Browse teams</Link>
           <Link href="/problem-statements" className="btn-secondary btn-sm">Problems</Link>
+          <Link href="/profile" className="btn-secondary btn-sm">My profile</Link>
         </div>
       </section>
 

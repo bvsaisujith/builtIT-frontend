@@ -29,6 +29,9 @@ export default function Header() {
         { href: '/submit/aim', label: 'Submit Aim' },
         { href: '/submit/final', label: 'Submit Final' },
         { href: '/about', label: 'About' },
+        // Only shown once onboarding is done — /profile redirects to
+        // /complete-profile otherwise, so the link would have nowhere new to go.
+        ...(profileCompleted ? [{ href: '/profile', label: 'Profile' }] : []),
         ...(profile?.role === 'admin' ? [{ href: '/admin', label: 'Admin' }] : []),
       ]
     : [
@@ -65,17 +68,25 @@ export default function Header() {
               {!profileCompleted && pathname !== '/complete-profile' && (
                 <Link href="/complete-profile" className="btn-secondary btn-sm">Complete profile</Link>
               )}
-              {profile?.avatar_url ? (
-                <img
-                  src={profile.avatar_url}
-                  alt=""
-                  referrerPolicy="no-referrer"
-                  style={{ width: 30, height: 30, borderRadius: '50%' }}
-                />
-              ) : null}
-              <span className="user-name">
-                {profile?.github_username ? `@${profile.github_username}` : profile?.full_name ?? user.email}
-              </span>
+              <Link
+                href="/profile"
+                className="user-identity"
+                title="Your profile"
+                aria-label="Your profile"
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}
+              >
+                {profile?.avatar_url ? (
+                  <img
+                    src={profile.avatar_url}
+                    alt=""
+                    referrerPolicy="no-referrer"
+                    style={{ width: 30, height: 30, borderRadius: '50%' }}
+                  />
+                ) : null}
+                <span className="user-name">
+                  {profile?.github_username ? `@${profile.github_username}` : profile?.full_name ?? user.email}
+                </span>
+              </Link>
               <button className="btn-text" onClick={handleLogout}>Log out</button>
             </>
           ) : (

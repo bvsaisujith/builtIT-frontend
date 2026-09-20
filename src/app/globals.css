@@ -405,6 +405,15 @@ h1, h2, h3, h4 {
   font-family: 'JetBrains Mono', monospace;
 }
 
+/* Header identity links to /profile (see Header.tsx). */
+.user-identity .user-name {
+  transition: color 0.2s;
+}
+
+.user-identity:hover .user-name {
+  color: var(--color-accent-secondary);
+}
+
 .menu-toggle {
   display: none;
   background: none;
