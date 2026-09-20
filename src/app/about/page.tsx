@@ -33,7 +33,7 @@ const DESIGNATIONS: Designation[] = [
   { name: 'Omprakash Chandragiri', role: 'President' },
   { name: 'Sai Sujith Bandlapalli Venkatarathnam', role: 'Secretary' },
   { name: 'Devisri Desu', role: 'Treasurer' },
-  { name: 'Balakrishna Reddy Alluru', role: 'Vice President' },
+  { name: 'Balakrishna Reddy Aluru', role: 'Vice President' },
   { name: 'Sai Sahithi Mallela', role: 'Joint Secretary' },
   { name: 'Nikhilaakshara P', role: 'Joint Secretary' },
 ];

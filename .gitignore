@@ -7,3 +7,5 @@ out/
 tsconfig.tsbuildinfo
 *.tsbuildinfo
 *.log
+env
+pnpm-lock.yaml
