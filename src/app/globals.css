@@ -2348,6 +2348,12 @@ h1, h2, h3, h4 {
   color: var(--color-text-secondary);
 }
 
+/* Office-bearer cards: 6 members read best as a 3 × 2 grid */
+.designation-grid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  margin-top: 34px;
+}
+
 .dev-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));

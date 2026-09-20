@@ -12,6 +12,7 @@ export default function Footer() {
         </div>
         <div className="footer-meta">
           <Link href="/about#about">CSIT Department · Explorer&apos;s Club</Link>
+          <Link href="/about#designations">Office Bearers</Link>
           <Link href="/about#rules">Rules &amp; Regulations</Link>
           <Link href="/about#developers">Developers</Link>
           <span>© 2026 built IT</span>

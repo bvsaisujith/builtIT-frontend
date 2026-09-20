@@ -4,7 +4,7 @@ import Link from 'next/link';
 export const metadata: Metadata = {
   title: 'About | built IT 2K26',
   description:
-    "About the CSIT Department & Explorer's Club, built IT 2K26 rules and regulations, and the developers behind the platform.",
+    "About the CSIT Department & Explorer's Club, its office bearers, built IT 2K26 rules and regulations, and the developers behind the platform.",
 };
 
 const RULES: string[] = [
@@ -24,6 +24,20 @@ const RULES: string[] = [
   "Organizer's Decision: The decisions of the judging panel and organizing committee will be final.",
 ];
 
+interface Designation {
+  name: string;
+  role: string;
+}
+
+const DESIGNATIONS: Designation[] = [
+  { name: 'Omprakash Chandragiri', role: 'President' },
+  { name: 'Sai Sujith Bandlapalli Venkatarathnam', role: 'Secretary' },
+  { name: 'Devisri Desu', role: 'Treasurer' },
+  { name: 'Balakrishna Reddy Alluri', role: 'Vice President' },
+  { name: 'Sai Sahithi Mallela', role: 'Joint Secretary' },
+  { name: 'Nikhilaakshara P', role: 'Joint Secretary' },
+];
+
 interface Developer {
   name: string;
   initials: string;
@@ -35,7 +49,7 @@ interface Developer {
 const DEVELOPERS: Developer[] = [
   {
     name: 'Sai Sujith Bandlapalli Venkatarathnam',
-    initials: 'BVSS',
+    initials: 'SS',
     github: 'https://github.com/bvsaisujith',
     linkedin: 'https://www.linkedin.com/in/sai-sujith-bv-bb582a385',
     email: 'bvsaisujith27@gmail.com',
@@ -100,10 +114,28 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* 02 — Rules & regulations */}
+      {/* 02 — CSIT Explorer's Club office bearers */}
+      <section className="section-frame" id="designations" style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
+        <div className="section-heading" data-reveal>
+          <div className="section-index">02 <span>/</span> OFFICE BEARERS</div>
+          <p>CSIT Explorer&apos;s Club designations — the student office bearers behind built IT 2K26.</p>
+        </div>
+        <div className="about-people designation-grid" data-reveal data-reveal-stagger>
+          {DESIGNATIONS.map((member, index) => (
+            <div key={`${member.role}-${member.name}`} className="about-person">
+              <span className="about-person-role">
+                {String(index + 1).padStart(2, '0')} · {member.role}
+              </span>
+              <strong>{member.name}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 03 — Rules & regulations */}
       <section className="section-frame" id="rules" style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
         <div className="section-heading" data-reveal>
-          <div className="section-index">02 <span>/</span> RULES</div>
+          <div className="section-index">03 <span>/</span> RULES</div>
           <p>Rules &amp; Regulations. Read them before you build — the judges will.</p>
         </div>
         <ol className="rules-list" data-reveal data-reveal-stagger>
@@ -116,10 +148,10 @@ export default function AboutPage() {
         </ol>
       </section>
 
-      {/* 03 — Developers */}
+      {/* 04 — Developers */}
       <section className="section-frame" id="developers" style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
         <div className="section-heading" data-reveal>
-          <div className="section-index">03 <span>/</span> DEVELOPERS</div>
+          <div className="section-index">04 <span>/</span> DEVELOPERS</div>
           <p>The platform behind built IT 2K26 — designed and built in-house.</p>
         </div>
         <div className="dev-grid" data-reveal data-reveal-stagger>
