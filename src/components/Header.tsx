@@ -28,12 +28,14 @@ export default function Header() {
         { href: '/teams', label: 'Teams' },
         { href: '/submit/aim', label: 'Submit Aim' },
         { href: '/submit/final', label: 'Submit Final' },
+        { href: '/about', label: 'About' },
         ...(profile?.role === 'admin' ? [{ href: '/admin', label: 'Admin' }] : []),
       ]
     : [
         { href: '/#about', label: 'The Event' },
         { href: '/#categories', label: 'Categories' },
         { href: '/#how-it-works', label: 'How It Works' },
+        { href: '/about', label: 'About' },
       ];
 
   return (

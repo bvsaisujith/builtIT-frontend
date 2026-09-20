@@ -1,3 +1,7 @@
+'use client';
+
+import Link from 'next/link';
+
 export default function Footer() {
   return (
     <footer className="site-footer">
@@ -7,7 +11,9 @@ export default function Footer() {
           <span>Future of IT</span>
         </div>
         <div className="footer-meta">
-          <span>CSIT Department · Explorer&apos;s Club</span>
+          <Link href="/about#about">CSIT Department · Explorer&apos;s Club</Link>
+          <Link href="/about#rules">Rules &amp; Regulations</Link>
+          <Link href="/about#developers">Developers</Link>
           <span>© 2026 built IT</span>
         </div>
       </div>
