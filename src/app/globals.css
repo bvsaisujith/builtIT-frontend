@@ -2549,6 +2549,119 @@ h1, h2, h3, h4 {
 
 .sub-detail-block .sub-detail-label { margin-bottom: 6px; }
 
+/* --- Judging rubric (round 1 / round 2 evaluation panels) --- */
+.eval-stack {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+.review-score {
+  display: inline-block;
+  margin-top: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--color-accent-secondary);
+  border: 1px solid rgba(0, 154, 254, 0.35);
+  background: rgba(0, 80, 255, 0.12);
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+.rubric {
+  display: flex;
+  flex-direction: column;
+}
+
+.rubric-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.rubric-row:last-child { border-bottom: none; }
+
+.rubric-label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.rubric-over {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-warning);
+}
+
+.rubric-max {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.rubric-input {
+  width: 92px;
+  padding: 8px 12px;
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Hide the number spinners so the field reads as a scoring box. */
+.rubric-input::-webkit-outer-spin-button,
+.rubric-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.rubric-input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
+
+.rubric-total {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.rubric-total-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 22px;
+  color: var(--color-accent-secondary);
+}
+
+.rubric-total-empty { color: var(--color-text-muted); }
+
+.rubric-total-max {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.rubric-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+@media (max-width: 560px) {
+  .rubric-label { font-size: 13px; }
+  .rubric-input { width: 76px; }
+  .rubric-actions .btn-primary,
+  .rubric-actions .btn-secondary { flex: 1 1 45%; justify-content: center; }
+}
+
+
 /* ============================================================
    MOTION SYSTEM — scroll reveals, fluid ambience, hover polish
    ============================================================ */

@@ -5,7 +5,15 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import AdminGuard from '@/components/AdminGuard';
 import StatusBadge from '@/components/StatusBadge';
-import { fetchAdminTeamDetail, type AdminSubmissionRow, type AdminTeamDetail } from '@/lib/admin-client';
+import EvaluationPanel from '@/components/EvaluationPanel';
+import { RUBRICS, rubricMaxTotal } from '@/lib/rubrics';
+import {
+  fetchAdminTeamDetail,
+  type AdminSubmissionRow,
+  type AdminTeamDetail,
+  type SavedEvaluation,
+} from '@/lib/admin-client';
+import type { SubmissionStage } from '@/lib/types';
 
 function fmtDate(value: string | null | undefined): string {
   return value ? new Date(value).toLocaleString() : '—';
@@ -36,11 +44,18 @@ function SubmissionCard({
     <div className="dash-card">
       <div className="team-card-header">
         <h3>{stage === 'AIM' ? 'Submission 1 · Aim' : 'Submission 2 · Final'}</h3>
-        {submission ? (
-          <StatusBadge status={submission.status as Parameters<typeof StatusBadge>[0]['status']} />
-        ) : (
-          <span className="status-badge status-NOT_SUBMITTED"><span className="dot" />Not started</span>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {submission && submission.score !== null && (
+            <span className="review-score" title="Round score">
+              {submission.score} / {rubricMaxTotal(RUBRICS[stage])}
+            </span>
+          )}
+          {submission ? (
+            <StatusBadge status={submission.status as Parameters<typeof StatusBadge>[0]['status']} />
+          ) : (
+            <span className="status-badge status-NOT_SUBMITTED"><span className="dot" />Not started</span>
+          )}
+        </div>
       </div>
 
       {!submission ? (
@@ -110,6 +125,8 @@ function TeamReviewContent() {
   const [detail, setDetail] = useState<AdminTeamDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  // Per-round confirmation banner, e.g. "Evaluation saved — 82 / 100".
+  const [flash, setFlash] = useState<{ stage: SubmissionStage; message: string } | null>(null);
 
   useEffect(() => {
     if (!teamId) return;
@@ -120,6 +137,40 @@ function TeamReviewContent() {
       setLoading(false);
     })();
   }, [teamId]);
+
+  /**
+   * Merge a saved evaluation back into the loaded detail, so the badges, round
+   * totals and the "last scored" stamp update without a full page reload.
+   */
+  const handleSaved = (stage: SubmissionStage, saved: SavedEvaluation) => {
+    setDetail(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        submissions: prev.submissions.map(s =>
+          s.id === saved.id
+            ? {
+                ...s,
+                score: saved.score,
+                criteria_scores: saved.criteria_scores,
+                feedback: saved.feedback,
+                status: saved.status,
+                reviewed_at: saved.reviewed_at,
+                reviewed_by: saved.reviewed_by,
+              }
+            : s,
+        ),
+      };
+    });
+
+    const decision = saved.status.replace('_', ' ').toLowerCase();
+    setFlash({
+      stage,
+      message: saved.score === null
+        ? `Decision saved — marked ${decision}.`
+        : `Evaluation saved — ${saved.score} / ${rubricMaxTotal(RUBRICS[stage])} (${decision}).`,
+    });
+  };
 
   if (loading) {
     return (
@@ -223,6 +274,28 @@ function TeamReviewContent() {
       <div className="dash-grid" style={{ marginTop: '20px' }}>
         <SubmissionCard stage="AIM" submission={aim} deadline={deadlines?.aim_deadline ?? null} />
         <SubmissionCard stage="FINAL" submission={final} deadline={deadlines?.final_deadline ?? null} />
+      </div>
+
+      {/* Judging: round 1 (aim + PPT) and round 2 (final build + demo) */}
+      <h2 style={{ marginTop: '36px', fontSize: '22px' }}>Round evaluation</h2>
+      <p className="form-hint" style={{ marginBottom: '18px' }}>
+        Round 1 scores the aim and presentation deck. Round 2 scores the final build and demo.
+        Each rubric totals 100 points; scores and feedback stay visible to organizers only.
+      </p>
+
+      <div className="eval-stack">
+        <EvaluationPanel
+          rubric={RUBRICS.AIM}
+          submission={aim}
+          flash={flash?.stage === 'AIM' ? flash.message : null}
+          onSaved={saved => handleSaved('AIM', saved)}
+        />
+        <EvaluationPanel
+          rubric={RUBRICS.FINAL}
+          submission={final}
+          flash={flash?.stage === 'FINAL' ? flash.message : null}
+          onSaved={saved => handleSaved('FINAL', saved)}
+        />
       </div>
     </div>
   );

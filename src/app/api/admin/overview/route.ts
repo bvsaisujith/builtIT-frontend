@@ -36,7 +36,11 @@ export async function GET(request: NextRequest) {
           )
           .order('created_at', { ascending: false }),
         supabase.from('profiles').select('*').order('created_at', { ascending: false }),
-        supabase.from('submissions').select('team_id, stage, status, submitted_at'),
+        supabase
+          .from('submissions')
+          // `score` (the round total) rides along so the review table can show
+          // each round's score without a second round-trip.
+          .select('team_id, stage, status, submitted_at, score'),
       ]);
 
     const firstError = [

@@ -25,6 +25,8 @@ export interface AdminSubmissionSummary {
   stage: 'AIM' | 'FINAL';
   status: string;
   submitted_at: string | null;
+  /** Round total (0..100) once an organizer has scored the round, else null. */
+  score: number | null;
 }
 
 export interface AdminTeamMemberRow {
@@ -56,6 +58,14 @@ export interface AdminSubmissionRow {
   status: string;
   submitted_at: string | null;
   created_at: string;
+  // --- judging (migration 013) ---
+  /** Round total computed from criteria_scores, null until scored. */
+  score: number | null;
+  /** Per-criterion points keyed by the criterion ids in lib/rubrics.ts. */
+  criteria_scores: Record<string, number> | null;
+  feedback: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
 }
 
 export interface AdminTeamDetail {
@@ -82,7 +92,10 @@ export async function checkAdminSession(): Promise<boolean> {
   }
 }
 
-async function postJson(url: string, body: unknown): Promise<{ error: string | null }> {
+async function postJsonWithBody<T>(
+  url: string,
+  body: unknown,
+): Promise<{ error: string | null; data: T | null }> {
   try {
     const response = await fetch(url, {
       method: 'POST',
@@ -91,12 +104,18 @@ async function postJson(url: string, body: unknown): Promise<{ error: string | n
     });
     if (!response.ok) {
       const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-      return { error: payload?.error ?? `Request failed (${response.status}).` };
+      return { error: payload?.error ?? `Request failed (${response.status}).`, data: null };
     }
-    return { error: null };
+    const data = (await response.json().catch(() => null)) as T | null;
+    return { error: null, data };
   } catch {
-    return { error: 'Could not reach the server. Try again.' };
+    return { error: 'Could not reach the server. Try again.', data: null };
   }
+}
+
+async function postJson(url: string, body: unknown): Promise<{ error: string | null }> {
+  const { error } = await postJsonWithBody(url, body);
+  return { error };
 }
 
 async function postAction(payload: Record<string, unknown>): Promise<{ error: string | null }> {
@@ -160,4 +179,45 @@ export function adminDeleteTeam(teamId: string): Promise<{ error: string | null 
 
 export function adminDeleteParticipant(userId: string): Promise<{ error: string | null }> {
   return postAction({ action: 'delete_participant', id: userId });
+}
+
+// ---------------------------------------------------------------------------
+// Judging (round 1 + round 2 rubrics — see lib/rubrics.ts)
+// ---------------------------------------------------------------------------
+
+/** Decisions an organizer can record for a submission. */
+export type ReviewDecision = 'SUBMITTED' | 'UNDER_REVIEW' | 'ACCEPTED' | 'REJECTED';
+
+/** The judging slice of a submission, as returned by a successful save. */
+export interface SavedEvaluation {
+  id: string;
+  score: number | null;
+  criteria_scores: Record<string, number> | null;
+  feedback: string | null;
+  status: string;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+}
+
+/**
+ * Persist an evaluation for one submission. Omitted fields are left untouched
+ * server-side, so a decision-only call (status) never clears saved points.
+ */
+export async function saveEvaluation(values: {
+  submissionId: string;
+  criteria?: Record<string, number>;
+  feedback?: string;
+  status?: ReviewDecision;
+}): Promise<{ error: string | null; submission: SavedEvaluation | null }> {
+  const { error, data } = await postJsonWithBody<{ submission?: SavedEvaluation }>(
+    '/api/admin/actions',
+    {
+      action: 'save_evaluation',
+      id: values.submissionId,
+      criteria: values.criteria,
+      feedback: values.feedback,
+      status: values.status,
+    },
+  );
+  return { error, submission: data?.submission ?? null };
 }

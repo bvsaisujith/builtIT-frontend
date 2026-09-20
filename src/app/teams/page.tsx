@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import AuthGuard from '@/components/AuthGuard';
+import Pagination from '@/components/Pagination';
 import { getMyTeamId, getTeamsDirectory, type TeamDirectoryRow } from '@/lib/data';
 
 type SortKey = 'name' | 'members' | 'newest';
@@ -25,20 +26,6 @@ function SearchIcon() {
       <line x1="21" y1="21" x2="16.2" y2="16.2" />
     </svg>
   );
-}
-
-/** Compact pager window — e.g. 1 … 4 [5] 6 … 12 */
-function pageWindow(current: number, total: number): (number | 'gap')[] {
-  const wanted = new Set<number>([1, total, current - 1, current, current + 1]);
-  const pages = [...wanted].filter(p => p >= 1 && p <= total).sort((a, b) => a - b);
-  const out: (number | 'gap')[] = [];
-  let prev = 0;
-  for (const p of pages) {
-    if (prev !== 0 && p - prev > 1) out.push('gap');
-    out.push(p);
-    prev = p;
-  }
-  return out;
 }
 
 function TeamsDirectoryContent() {
@@ -352,44 +339,12 @@ function TeamsDirectoryContent() {
             </div>
 
             {totalPages > 1 && (
-              <nav className="pagination" aria-label="Teams pagination">
-                <button
-                  type="button"
-                  className="page-btn page-btn-wide"
-                  onClick={() => goToPage(page - 1)}
-                  disabled={page === 1}
-                >
-                  ← Prev
-                </button>
-
-                <div className="page-numbers">
-                  {pageWindow(page, totalPages).map((p, i) =>
-                    p === 'gap' ? (
-                      <span key={`gap-${i}`} className="page-gap" aria-hidden="true">…</span>
-                    ) : (
-                      <button
-                        key={p}
-                        type="button"
-                        className={p === page ? 'page-btn active' : 'page-btn'}
-                        onClick={() => goToPage(p)}
-                        aria-label={`Page ${p}`}
-                        aria-current={p === page ? 'page' : undefined}
-                      >
-                        {p}
-                      </button>
-                    )
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  className="page-btn page-btn-wide"
-                  onClick={() => goToPage(page + 1)}
-                  disabled={page === totalPages}
-                >
-                  Next →
-                </button>
-              </nav>
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                onChange={goToPage}
+                ariaLabel="Teams pagination"
+              />
             )}
           </>
         )}
