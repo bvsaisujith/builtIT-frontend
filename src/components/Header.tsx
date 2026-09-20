@@ -28,6 +28,7 @@ export default function Header() {
         { href: '/teams', label: 'Teams' },
         { href: '/submit/aim', label: 'Submit Aim' },
         { href: '/submit/final', label: 'Submit Final' },
+        { href: '/leaderboard', label: 'Leaderboard' },
         { href: '/about', label: 'About' },
         // Only shown once onboarding is done — /profile redirects to
         // /complete-profile otherwise, so the link would have nowhere new to go.
@@ -38,6 +39,7 @@ export default function Header() {
         { href: '/#about', label: 'The Event' },
         { href: '/#categories', label: 'Categories' },
         { href: '/#how-it-works', label: 'How It Works' },
+        { href: '/leaderboard', label: 'Leaderboard' },
         { href: '/about', label: 'About' },
       ];
 

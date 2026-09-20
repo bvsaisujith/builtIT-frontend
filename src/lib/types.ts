@@ -166,6 +166,15 @@ export interface TeamWithDetails extends Team {
   };
 }
 
+// === Public leaderboard (migration 014) ===
+// Exactly what the /leaderboard page shows: rank, team name and total score.
+export interface LeaderboardRow {
+  team_id: string;
+  team_name: string;
+  total: number;
+  team_rank: number;
+}
+
 export interface AuthCheck {
   session: boolean;
   profile: Profile | null;

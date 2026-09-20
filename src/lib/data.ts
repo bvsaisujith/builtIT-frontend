@@ -8,6 +8,7 @@ import type {
   Domain,
   Team,
   TeamMemberPublic,
+  LeaderboardRow,
 } from './types';
 
 // ---------------------------------------------------------------------------
@@ -34,6 +35,21 @@ export async function getProfile() {
     .eq('id', user.id)
     .maybeSingle();
   return data;
+}
+
+// ---------------------------------------------------------------------------
+// Public leaderboard (migration 014) — rank, team name, total score only.
+// ---------------------------------------------------------------------------
+
+/**
+ * Ranked teams by total score across both rounds. Safe to call signed-out:
+ * the SECURITY DEFINER RPC exposes nothing but rank, team name, total and the
+ * team id (used for the "open team" link).
+ */
+export async function getLeaderboard(): Promise<{ rows: LeaderboardRow[]; error: string | null }> {
+  const { data, error } = await supabase.rpc('get_leaderboard');
+  if (error) return { rows: [], error: error.message };
+  return { rows: (data ?? []) as unknown as LeaderboardRow[], error: null };
 }
 
 // ---------------------------------------------------------------------------
