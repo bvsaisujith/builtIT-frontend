@@ -166,13 +166,14 @@ export interface TeamWithDetails extends Team {
   };
 }
 
-// === Public leaderboard (migration 014) ===
-// Exactly what the /leaderboard page shows: rank, team name and total score.
-export interface LeaderboardRow {
+// === Public winners podium (migration 015/016) ===
+// One row per announced podium position, as returned by the get_winners()
+// SECURITY DEFINER RPC: position, team id, team name and team code only.
+export interface WinnerRow {
+  position: number; // 1 | 2 | 3
   team_id: string;
   team_name: string;
-  total: number;
-  team_rank: number;
+  team_code: string | null;
 }
 
 export interface AuthCheck {

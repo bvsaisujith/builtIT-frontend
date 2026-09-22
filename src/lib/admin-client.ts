@@ -182,6 +182,42 @@ export function adminDeleteParticipant(userId: string): Promise<{ error: string 
 }
 
 // ---------------------------------------------------------------------------
+// Winners podium (migration 015)
+// ---------------------------------------------------------------------------
+
+/** Current podium selections keyed by position, from /api/admin/winners. */
+export interface AdminWinners {
+  first_team_id: string | null;
+  second_team_id: string | null;
+  third_team_id: string | null;
+}
+
+export async function fetchAdminWinners(): Promise<AdminWinners> {
+  try {
+    const response = await fetch('/api/admin/winners', { cache: 'no-store' });
+    if (!response.ok) return { first_team_id: null, second_team_id: null, third_team_id: null };
+    const data = (await response.json()) as { winners?: { position: number; team_id: string }[] };
+    const out: AdminWinners = { first_team_id: null, second_team_id: null, third_team_id: null };
+    for (const w of data.winners ?? []) {
+      if (w.position === 1) out.first_team_id = w.team_id;
+      if (w.position === 2) out.second_team_id = w.team_id;
+      if (w.position === 3) out.third_team_id = w.team_id;
+    }
+    return out;
+  } catch {
+    return { first_team_id: null, second_team_id: null, third_team_id: null };
+  }
+}
+
+export function saveWinners(values: {
+  first_team_id: string | null;
+  second_team_id: string | null;
+  third_team_id: string | null;
+}): Promise<{ error: string | null }> {
+  return postJson('/api/admin/winners', values);
+}
+
+// ---------------------------------------------------------------------------
 // Judging (round 1 + round 2 rubrics — see lib/rubrics.ts)
 // ---------------------------------------------------------------------------
 

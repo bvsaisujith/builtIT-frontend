@@ -2454,11 +2454,44 @@ h1, h2, h3, h4 {
   .rules-list { grid-template-columns: 1fr; }
 }
 
-/* ============================== LEADERBOARD ============================== */
-.leaderboard-page {
-  max-width: 860px;
+/* ============================== WINNERS ============================== */
+.winners-page {
+  max-width: 1000px;
   margin: 0 auto;
   padding: 60px 24px;
+}
+
+/* --- grand entrance choreography -------------------------------------------
+   Every animated element carries a --d custom property (its beat, in ms).
+   Keyframes use animation-fill-mode: backwards so elements hold their "from"
+   state before their beat and land exactly on their resting style afterwards
+   (hover transforms keep working). Reduced-motion users get the final frame
+   instantly via the global media query + the explicit block at the end. */
+.win-in {
+  animation: winIn 0.65s var(--ease-out) var(--d, 0ms) backwards;
+}
+
+@keyframes winIn {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Gold-leaf title with a slow shimmer after it lands. */
+.winners-title {
+  font-size: clamp(38px, 6.4vw, 60px);
+  background: linear-gradient(100deg, #ffffff 25%, #ffd766 45%, #ffe9b0 55%, #ffffff 78%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation:
+    winIn 0.65s var(--ease-out) var(--d, 0ms) backwards,
+    titleShimmer 4.5s ease-in-out 1.4s infinite;
+}
+
+@keyframes titleShimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
 }
 
 .lb-hero {
@@ -2516,100 +2549,355 @@ h1, h2, h3, h4 {
   letter-spacing: 0;
 }
 
-.lb-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+/* --- podium stage: spotlight, confetti, ambient depth --- */
+.podium-stage {
+  position: relative;
 }
 
-.lb-row-link {
+/* Warm halo behind the podium; breathes slowly. */
+.podium-spotlight {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: min(840px, 115%);
+  height: 460px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    closest-side,
+    rgba(255, 197, 66, 0.14),
+    rgba(255, 197, 66, 0.045) 48%,
+    transparent 72%
+  );
+  pointer-events: none;
+  animation: spotlightBreathe 5.5s ease-in-out infinite;
+}
+
+@keyframes spotlightBreathe {
+  0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+  50%      { opacity: 1;   transform: translate(-50%, -50%) scale(1.06); }
+}
+
+/* One-shot confetti drop, timed to land right after the winner is revealed. */
+.podium-confetti {
+  position: absolute;
+  top: -36px;
+  left: 0;
+  right: 0;
+  height: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.podium-confetti i {
+  position: absolute;
+  top: 0;
+  width: var(--s, 6px);
+  height: calc(var(--s, 6px) * 2.1);
+  border-radius: 2px;
+  /* Resting state stays invisible: the animation fades each piece in on its
+     beat and back out at the end, and with fill-mode: backwards the piece
+     returns to THIS style when the animation finishes (no stuck flecks). */
+  opacity: 0;
+  animation: confettiFall var(--t, 3s) cubic-bezier(0.3, 0.55, 0.55, 1) var(--dl, 2s) backwards;
+}
+
+.podium-confetti i.gold   { background: linear-gradient(180deg, #ffe08a, #f0a91d); }
+.podium-confetti i.silver { background: linear-gradient(180deg, #eef2fb, #aab6c9); }
+.podium-confetti i.bronze { background: linear-gradient(180deg, #f2c194, #b97642); }
+
+@keyframes confettiFall {
+  0%   { opacity: 0; transform: translate(0, 0) rotate(0deg); }
+  8%   { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx, 0px), 380px) rotate(var(--rot, 540deg)); }
+}
+
+.podium {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: end;
+  gap: 18px;
+}
+
+.podium-slot {
+  position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 16px 20px;
+  gap: 9px;
+  padding: 30px 18px;
+  text-align: center;
+  text-decoration: none;
   background: var(--color-bg-elevated);
   border: 1px solid var(--color-border-subtle);
-  border-radius: 12px;
-  text-decoration: none;
+  border-radius: 16px;
+  animation: podiumRise 0.75s cubic-bezier(0.2, 0.9, 0.3, 1.12) var(--d, 0ms) backwards;
   transition:
     border-color var(--motion-fast) var(--ease-out),
     transform var(--motion-fast) var(--ease-out),
     background var(--motion-fast) var(--ease-out);
 }
 
-.lb-row-link:hover {
+@keyframes podiumRise {
+  0%   { opacity: 0; transform: translateY(52px) scale(0.94); }
+  62%  { opacity: 1; transform: translateY(-9px) scale(1.025); }
+  100% { opacity: 1; transform: none; }
+}
+
+/* 1st place stands tallest. */
+.podium-slot.win-first { padding-top: 52px; padding-bottom: 48px; }
+.podium-slot.win-third { padding-top: 24px; padding-bottom: 28px; }
+
+.podium-slot:not(.podium-empty):hover {
   border-color: var(--color-accent-secondary);
   background: rgba(0, 80, 255, 0.06);
-  transform: translateY(-2px);
+  transform: translateY(-4px);
 }
 
-.lb-rank {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  border: 1px solid var(--color-border-subtle);
-  background: rgba(255, 255, 255, 0.03);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
-  color: var(--color-text-secondary);
-  flex-shrink: 0;
+/* 1st place: molten-gold gradient border + breathing halo. */
+.podium-slot.win-first:not(.podium-empty) {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--color-bg-elevated), var(--color-bg-elevated)) padding-box,
+    linear-gradient(160deg, rgba(255, 215, 102, 0.7), rgba(240, 169, 29, 0.12) 42%, rgba(255, 232, 166, 0.4)) border-box;
+  animation:
+    podiumRise 0.75s cubic-bezier(0.2, 0.9, 0.3, 1.12) var(--d, 0ms) backwards,
+    firstHalo 3.4s ease-in-out calc(var(--d, 0ms) + 1000ms) infinite;
 }
 
-.lb-top-1 .lb-rank {
-  color: #1c1500;
-  border-color: transparent;
-  background: linear-gradient(135deg, #ffd766, #f0a91d);
+.podium-slot.win-first:not(.podium-empty):hover {
+  border-color: rgba(255, 197, 66, 0.5);
+  background: rgba(255, 197, 66, 0.05);
 }
 
-.lb-top-2 .lb-rank {
-  color: #10141c;
-  border-color: transparent;
-  background: linear-gradient(135deg, #e6ebf5, #aab6c9);
+@keyframes firstHalo {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 197, 66, 0), 0 14px 44px -18px rgba(240, 169, 29, 0.25); }
+  50%      { box-shadow: 0 0 0 1px rgba(255, 197, 66, 0.3), 0 22px 70px -14px rgba(240, 169, 29, 0.5); }
 }
 
-.lb-top-3 .lb-rank {
-  color: #1f1206;
-  border-color: transparent;
-  background: linear-gradient(135deg, #e8b184, #b97642);
+/* Winner's crown: pops in last, then sways gently. */
+.podium-crown {
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  font-size: 30px;
+  line-height: 1;
+  filter: drop-shadow(0 4px 10px rgba(240, 169, 29, 0.5));
+  animation:
+    crownPop 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.35) calc(var(--d, 0ms) + 1050ms) backwards,
+    crownSway 3.2s ease-in-out calc(var(--d, 0ms) + 1650ms) infinite;
 }
 
-.lb-team-name {
-  flex: 1;
-  min-width: 0;
-  font-weight: 600;
-  font-size: 16px;
-  color: var(--color-text-primary);
+@keyframes crownPop {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(-26px) scale(0.3) rotate(-18deg); }
+  70%  { opacity: 1; transform: translateX(-50%) translateY(3px) scale(1.15) rotate(5deg); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1) rotate(-5deg); }
+}
+
+@keyframes crownSway {
+  0%, 100% { transform: translateX(-50%) rotate(-5deg); }
+  50%      { transform: translateX(-50%) rotate(4deg); }
+}
+
+.podium-medal {
+  font-size: clamp(40px, 5vw, 52px);
+  line-height: 1;
+  animation: medalDrop 0.85s cubic-bezier(0.2, 0.9, 0.3, 1.25) calc(var(--d, 0ms) + 240ms) backwards;
+}
+
+@keyframes medalDrop {
+  0%   { opacity: 0; transform: translateY(-38px) scale(0.4) rotate(-16deg); }
+  60%  { opacity: 1; transform: translateY(5px) scale(1.14) rotate(5deg); }
+  82%  { transform: translateY(-3px) scale(0.97) rotate(-2deg); }
+  100% { opacity: 1; transform: none; }
+}
+
+.podium-slot.win-first .podium-medal { filter: drop-shadow(0 0 12px rgba(255, 197, 66, 0.5)); }
+.win-second .podium-medal { filter: drop-shadow(0 0 10px rgba(170, 182, 201, 0.4)); }
+.win-third .podium-medal { filter: drop-shadow(0 0 10px rgba(185, 118, 66, 0.4)); }
+
+/* Gold medal keeps a soft pulse once it has landed. */
+.podium-slot.win-first:not(.podium-empty) .podium-medal {
+  animation:
+    medalDrop 0.85s cubic-bezier(0.2, 0.9, 0.3, 1.25) calc(var(--d, 0ms) + 240ms) backwards,
+    medalPulse 2.8s ease-in-out calc(var(--d, 0ms) + 1200ms) infinite;
+}
+
+@keyframes medalPulse {
+  0%, 100% { filter: drop-shadow(0 0 10px rgba(255, 197, 66, 0.4)); }
+  50%      { filter: drop-shadow(0 0 24px rgba(255, 215, 102, 0.85)); }
+}
+
+/* Light sweep across the card after it lands: gold for the winner,
+   cool metal for 2nd, warm bronze for 3rd. */
+.podium-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.13) 50%, transparent 60%);
+  background-size: 240% 100%;
+  background-repeat: no-repeat;
+  /* Resting position = the animation's final frame, so nothing shows once the
+     sweep is over (fill-mode: backwards reverts to this rule). */
+  background-position: 135% 0;
+  animation: sheenSweep 1.15s var(--ease-out) calc(var(--d, 0ms) + 800ms) backwards;
+}
+
+.win-first .podium-sheen {
+  background: linear-gradient(115deg, transparent 38%, rgba(255, 215, 102, 0.22) 50%, transparent 62%);
+  background-size: 240% 100%;
+  background-repeat: no-repeat;
+  background-position: 135% 0;
+}
+
+@keyframes sheenSweep {
+  from { background-position: -35% 0; }
+  to   { background-position: 135% 0; }
+}
+
+/* Drifting motes inside each card. */
+.podium-sparkles {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  pointer-events: none;
 }
 
-.lb-total {
+.podium-sparkles i {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff7db 0%, rgba(255, 215, 102, 0) 70%);
+  opacity: 0;
+  animation: sparkleTwinkle 2.8s ease-in-out calc(var(--d, 0ms) + 1400ms) infinite;
+}
+
+.win-second .podium-sparkles i {
+  background: radial-gradient(circle, #eef2fb 0%, rgba(170, 182, 201, 0) 70%);
+  animation-duration: 3.6s;
+}
+
+.win-third .podium-sparkles i {
+  background: radial-gradient(circle, #ffe4c4 0%, rgba(185, 118, 66, 0) 70%);
+  animation-duration: 3.2s;
+}
+
+.podium-sparkles i:nth-child(1) { top: 16%; left: 12%; }
+.podium-sparkles i:nth-child(2) { top: 24%; right: 14%; width: 4px; height: 4px; animation-delay: calc(var(--d, 0ms) + 1700ms); }
+.podium-sparkles i:nth-child(3) { top: 52%; left: 8%; width: 5px; height: 5px; animation-delay: calc(var(--d, 0ms) + 2000ms); }
+.podium-sparkles i:nth-child(4) { bottom: 18%; right: 10%; animation-delay: calc(var(--d, 0ms) + 2300ms); }
+.podium-sparkles i:nth-child(5) { top: 40%; right: 22%; width: 4px; height: 4px; animation-delay: calc(var(--d, 0ms) + 2600ms); }
+.podium-sparkles i:nth-child(6) { bottom: 30%; left: 20%; width: 5px; height: 5px; animation-delay: calc(var(--d, 0ms) + 2900ms); }
+
+@keyframes sparkleTwinkle {
+  0%, 100% { opacity: 0; transform: scale(0.3); }
+  50%      { opacity: 0.9; transform: scale(1); }
+}
+
+/* Text beats, offset from the card's own beat. */
+.podium-position,
+.podium-team-name,
+.podium-team-code,
+.podium-tba,
+.podium-arrow {
+  animation: winIn 0.55s var(--ease-out) backwards;
+}
+
+.podium-position {
+  animation-delay: calc(var(--d, 0ms) + 620ms);
   font-family: 'JetBrains Mono', monospace;
-  font-size: 22px;
-  color: var(--color-accent-secondary);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
 }
 
-.lb-arrow {
+.win-first .podium-position { color: #f0a91d; }
+.win-second .podium-position { color: #aab6c9; }
+.win-third .podium-position { color: #b97642; }
+
+.podium-team-name {
+  animation-delay: calc(var(--d, 0ms) + 700ms);
+  font-weight: 700;
+  font-size: clamp(18px, 2.2vw, 21px);
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.podium-team-code {
+  animation-delay: calc(var(--d, 0ms) + 820ms);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
   color: var(--color-text-muted);
+}
+
+.podium-tba {
+  animation-delay: calc(var(--d, 0ms) + 700ms);
+  font-size: 13.5px;
+  color: var(--color-text-muted);
+}
+
+.podium-empty {
+  opacity: 0.55;
+  border-style: dashed;
+  animation: winIn 0.6s var(--ease-out) var(--d, 0ms) backwards;
+}
+
+.podium-arrow {
+  animation-delay: calc(var(--d, 0ms) + 920ms);
+  color: var(--color-text-muted);
+  font-size: 14px;
   transition: transform var(--motion-fast) var(--ease-out);
 }
 
-.lb-row-link:hover .lb-arrow {
+.podium-slot:not(.podium-empty):hover .podium-arrow {
   color: var(--color-accent-secondary);
   transform: translateX(3px);
 }
 
+.win-first .podium-team-name { color: #ffd766; }
+.win-second .podium-team-name { color: #e6ebf5; }
+.win-third .podium-team-name { color: #e8b184; }
+
 @media (max-width: 640px) {
-  .leaderboard-page { padding: 40px 16px 64px; }
-  .lb-row-link { padding: 14px 16px; gap: 12px; }
-  .lb-team-name { font-size: 15px; }
-  .lb-total { font-size: 19px; }
-  .lb-rank { min-width: 36px; height: 36px; }
+  .winners-page { padding: 40px 16px 64px; }
+  .podium { grid-template-columns: 1fr; gap: 12px; }
+  .podium-slot.win-first,
+  .podium-slot.win-third { padding-top: 26px; padding-bottom: 30px; }
+  .podium-slot.win-first { padding-top: 40px; }
+  .podium-team-name { font-size: 17px; }
+  .podium-crown { top: -14px; font-size: 24px; }
+  .podium-spotlight { width: 130%; height: 100%; top: 50%; }
+  /* Stacked layout: keep the fall clean and skip the confetti. */
+  .podium-confetti { display: none; }
+}
+
+/* Accessibility: land every element on its resting state, skip the extras. */
+@media (prefers-reduced-motion: reduce) {
+  .podium-sheen,
+  .podium-confetti { display: none; }
+  .podium-sparkles i { animation: none; opacity: 0; }
+  .win-in,
+  .winners-title,
+  .podium-slot,
+  .podium-empty,
+  .podium-medal,
+  .podium-slot.win-first:not(.podium-empty) .podium-medal,
+  .podium-crown,
+  .podium-spotlight,
+  .podium-position,
+  .podium-team-name,
+  .podium-team-code,
+  .podium-tba,
+  .podium-arrow {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* ============================== ADMIN REVIEW ============================== */

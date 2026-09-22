@@ -12,6 +12,8 @@ import {
   setProblemActive,
   adminDeleteTeam,
   adminDeleteParticipant,
+  fetchAdminWinners,
+  saveWinners,
 } from '@/lib/admin-client';
 import type { AdminTeamRow, AdminParticipantRow } from '@/lib/data';
 import type { Domain, ProblemStatement, EventConfig } from '@/lib/types';
@@ -28,6 +30,7 @@ function AdminContent() {
   const [maxSize, setMaxSize] = useState(4);
   const [newDomain, setNewDomain] = useState({ name: '', slug: '', short_label: '' });
   const [newProblem, setNewProblem] = useState({ title: '', description: '', domain_id: '' });
+  const [winners, setWinners] = useState({ first_team_id: '', second_team_id: '', third_team_id: '' });
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,6 +55,12 @@ function AdminContent() {
     setTeams(data.teams);
     setParticipants(data.participants);
     setProblems(data.problems);
+    const savedWinners = await fetchAdminWinners();
+    setWinners({
+      first_team_id: savedWinners.first_team_id ?? '',
+      second_team_id: savedWinners.second_team_id ?? '',
+      third_team_id: savedWinners.third_team_id ?? '',
+    });
     setLoading(false);
   };
 
@@ -132,6 +141,23 @@ function AdminContent() {
   const toggleProblem = async (p: ProblemStatement) => {
     const { error: err } = await setProblemActive(p.id, !p.is_active);
     if (err) flash(null, err); else await reload();
+  };
+
+  const handleSaveWinners = async (ev: FormEvent) => {
+    ev.preventDefault();
+    setError(null); setOk(null);
+    const chosen = [winners.first_team_id, winners.second_team_id, winners.third_team_id].filter(Boolean);
+    if (new Set(chosen).size !== chosen.length) {
+      setError('Each winner position must be a different team.');
+      return;
+    }
+    const { error: err } = await saveWinners({
+      first_team_id: winners.first_team_id || null,
+      second_team_id: winners.second_team_id || null,
+      third_team_id: winners.third_team_id || null,
+    });
+    flash(err ? null : 'Winners saved.', err);
+    if (!err) await reload();
   };
 
   if (loading) {
@@ -247,6 +273,51 @@ function AdminContent() {
             <button type="submit" className="btn-secondary btn-sm" style={{ justifyContent: 'center' }}>Add problem</button>
           </form>
         </div>
+      </div>
+
+      <div className="dash-card" style={{ marginTop: '20px' }}>
+        <h3>Winners</h3>
+        <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '-4px' }}>
+          Pick the podium for the <Link href="/winners">winners page</Link>. Leave a position empty to hide it.
+        </p>
+        <form className="auth-form" onSubmit={handleSaveWinners}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+            <div className="form-group">
+              <label className="form-label">🥇 1st place</label>
+              <select
+                className="form-input"
+                value={winners.first_team_id}
+                onChange={e => setWinners(p => ({ ...p, first_team_id: e.target.value }))}
+              >
+                <option value="">Not announced</option>
+                {teams.map(t => <option key={t.id} value={t.id}>{t.name} ({t.team_code ?? 'no code'})</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">🥈 2nd place</label>
+              <select
+                className="form-input"
+                value={winners.second_team_id}
+                onChange={e => setWinners(p => ({ ...p, second_team_id: e.target.value }))}
+              >
+                <option value="">Not announced</option>
+                {teams.map(t => <option key={t.id} value={t.id}>{t.name} ({t.team_code ?? 'no code'})</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">🥉 3rd place</label>
+              <select
+                className="form-input"
+                value={winners.third_team_id}
+                onChange={e => setWinners(p => ({ ...p, third_team_id: e.target.value }))}
+              >
+                <option value="">Not announced</option>
+                {teams.map(t => <option key={t.id} value={t.id}>{t.name} ({t.team_code ?? 'no code'})</option>)}
+              </select>
+            </div>
+          </div>
+          <button type="submit" className="btn-secondary btn-sm" style={{ justifyContent: 'center' }}>Save winners</button>
+        </form>
       </div>
 
       <div className="dash-card" style={{ marginTop: '20px' }}>

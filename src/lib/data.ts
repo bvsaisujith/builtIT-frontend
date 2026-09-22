@@ -8,7 +8,7 @@ import type {
   Domain,
   Team,
   TeamMemberPublic,
-  LeaderboardRow,
+  WinnerRow,
 } from './types';
 
 // ---------------------------------------------------------------------------
@@ -38,18 +38,20 @@ export async function getProfile() {
 }
 
 // ---------------------------------------------------------------------------
-// Public leaderboard (migration 014) — rank, team name, total score only.
+// Public winners podium (migration 015) — the 1st / 2nd / 3rd place teams
+// picked by the organizers in the admin console.
 // ---------------------------------------------------------------------------
 
 /**
- * Ranked teams by total score across both rounds. Safe to call signed-out:
- * the SECURITY DEFINER RPC exposes nothing but rank, team name, total and the
- * team id (used for the "open team" link).
+ * The curated winners podium, ordered 1st → 3rd. Safe to call signed-out:
+ * the get_winners() RPC (migration 016, SECURITY DEFINER) joins the winners
+ * table to teams server-side and exposes nothing but position, team id, team
+ * name and team code.
  */
-export async function getLeaderboard(): Promise<{ rows: LeaderboardRow[]; error: string | null }> {
-  const { data, error } = await supabase.rpc('get_leaderboard');
+export async function getWinners(): Promise<{ rows: WinnerRow[]; error: string | null }> {
+  const { data, error } = await supabase.rpc('get_winners');
   if (error) return { rows: [], error: error.message };
-  return { rows: (data ?? []) as unknown as LeaderboardRow[], error: null };
+  return { rows: (data ?? []) as unknown as WinnerRow[], error: null };
 }
 
 // ---------------------------------------------------------------------------
